@@ -22,18 +22,15 @@ export const workspaceListCommand = defineCommand({
       const me = await ctx.client.me();
 
       printOutput(
-        ctx.json ? "json" : "table",
+        ctx.json,
         () => printJson(me.workspaces),
         () =>
+          // Curated columns: id / status are reachable via `workspace
+          // use <name>` and `--json` respectively, so the at-a-glance
+          // table only needs the picking fields.
           printTable(
-            ["ID", "NAME", "ROLE", "PLAN", "STATUS"],
-            me.workspaces.map((w) => [
-              w.id,
-              w.name,
-              w.role,
-              w.plan.productId ?? "—",
-              w.plan.status,
-            ]),
+            ["NAME", "ROLE", "PLAN"],
+            me.workspaces.map((w) => [w.name, w.role, w.plan.productId ?? "—"]),
           ),
       );
     });

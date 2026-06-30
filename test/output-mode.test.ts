@@ -1,15 +1,10 @@
 // `resolveOutputMode` is the one place that decides whether the
 // CLI prints a table or JSON. The behavior is:
-//   - `--json` flag → always "json"
-//   - stdout NOT a TTY → "json" (so pipes to `jq` work without
-//                          needing the flag)
+//   - `--json` flag → "json"
 //   - otherwise → "table"
 //
-// We don't try to stub `process.stdout.isTTY` because that
-// property is a `const` getter on some platforms and
-// `vi.stubGlobal` doesn't override it cleanly. The flag-value
-// branch is what callers actually configure; the TTY branch is
-// either-exit-environment code.
+// Table is the unconditional default — there's no TTY check.
+// Scripts that want the full row should pass `--json` explicitly.
 
 import { describe, expect, it } from "vitest";
 
@@ -20,16 +15,11 @@ describe("resolveOutputMode", () => {
     expect(resolveOutputMode(true)).toBe("json");
   });
 
-  it("does not crash when flagValue is undefined", () => {
-    // In a real TTY (vitest's default), this returns "table";
-    // in CI (no TTY) it returns "json". Either is correct; the
-    // important property is "doesn't throw".
-    expect(["table", "json"]).toContain(resolveOutputMode(undefined));
+  it("returns 'table' when flagValue is undefined", () => {
+    expect(resolveOutputMode(undefined)).toBe("table");
   });
 
-  it("returns 'json' regardless of TTY state when flagValue is true", () => {
-    // The flag always wins. The TTY path is only reached when
-    // flagValue is undefined / false.
-    expect(resolveOutputMode(true)).toBe("json");
+  it("returns 'table' when flagValue is false", () => {
+    expect(resolveOutputMode(false)).toBe("table");
   });
 });

@@ -18,7 +18,7 @@ reposmith <command> [flags]
 
 Run `reposmith help` to see all available commands, or `reposmith <command> help` for details on a specific command.
 
-Pass `--json` (or `-j`) to any list or get command to emit machine-readable output. The flag is also implied when stdout is piped.
+Pass `--json` (or `-j`) to any list or get command to emit machine-readable output. The default is a human-readable table.
 
 ### Commands
 
