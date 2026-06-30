@@ -27,7 +27,7 @@ export const jobsGetCommand = defineCommand({
       const ctx = resolveContext({ json: args.json });
       const result = await ctx.client.getJob(args.id as string);
 
-      if (ctx.json) {
+      if (ctx.json === "json") {
         printJson(result);
         return;
       }
