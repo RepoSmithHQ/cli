@@ -39,7 +39,6 @@ export const jobsGetCommand = defineCommand({
         `Repository:   ${job.repositoryId}`,
         `Created:      ${job.createdAt}`,
         `Updated:      ${job.updatedAt}`,
-        `Archive:      ${job.archiveUrl ?? "—"}`,
         `Encryption:   ${job.encryptionMode ?? "—"}`,
       ];
       console.log(lines.join("\n"));
