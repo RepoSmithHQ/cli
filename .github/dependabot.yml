@@ -1,0 +1,14 @@
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      dev-dependencies:
+        patterns:
+          - "*"
+    # Open PRs target `main`; we don't auto-merge — a maintainer
+    # reviews and runs CI on the bump PR just like any other.
+    open-pull-requests-limit: 5

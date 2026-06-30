@@ -8,9 +8,8 @@
 
 import { runMain } from "citty";
 
-import { main } from "./main.js";
-
 import { ApiError } from "./lib/errors.js";
+import { main } from "./main.js";
 
 async function dispatch(): Promise<void> {
   // `runMain` returns a Promise that resolves after the command

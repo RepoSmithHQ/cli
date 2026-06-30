@@ -47,14 +47,13 @@
 // on disk is scoped to /api/cli/* — it can't be replayed against
 // the regular web API.
 
-import open from "open";
-
 import { intro, isCancel, outro, spinner } from "@clack/prompts";
+import open from "open";
 
 import { ApiClient, DeviceFlowError } from "./client.js";
 import { loadConfig, saveConfig } from "./config.js";
-import { logSuccess } from "./output.js";
 import { resolveApiUrl } from "./env.js";
+import { logSuccess } from "./output.js";
 import type { WorkspaceSummary } from "./types.js";
 
 const CLI_CLIENT_ID = "reposmith-cli";
@@ -65,9 +64,7 @@ export interface LoginResult {
   workspaces: WorkspaceSummary[];
 }
 
-export async function loginFlow(opts?: {
-  apiUrl?: string;
-}): Promise<LoginResult> {
+export async function loginFlow(opts?: { apiUrl?: string }): Promise<LoginResult> {
   const apiUrl = opts?.apiUrl ?? resolveApiUrl();
   const client = new ApiClient({ baseUrl: apiUrl });
 
@@ -90,11 +87,15 @@ export async function loginFlow(opts?: {
   // the rest of the approval UI.
   let browserOpened = false;
   try {
-    browserOpened = await open(codes.verification_uri_complete, {
-      wait: false,
-    }).then(() => true);
+    // `open` returns a child-process handle on some platforms;
+    // we only care whether it succeeded. If `xdg-open` etc. is
+    // missing or refuses, the catch keeps `browserOpened` at
+    // its initial `false` and we fall through to printing the
+    // URL for the user to copy.
+    await open(codes.verification_uri_complete, { wait: false });
+    browserOpened = true;
   } catch {
-    browserOpened = false;
+    // browserOpened stays false
   }
 
   process.stderr.write(
@@ -137,10 +138,7 @@ export async function loginFlow(opts?: {
       await sleep(intervalSec * 1000);
 
       try {
-        const result = await client.pollDeviceToken(
-          codes.device_code,
-          CLI_CLIENT_ID,
-        );
+        const result = await client.pollDeviceToken(codes.device_code, CLI_CLIENT_ID);
         wait.stop("Approved.");
         sessionToken = result.access_token;
         break;

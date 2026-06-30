@@ -14,7 +14,7 @@ import { ApiClient } from "./client.js";
 import { loadConfig, requireConfig } from "./config.js";
 import { DEFAULT_API_URL } from "./consts.js";
 import { ApiError, NotLoggedInError } from "./errors.js";
-import { resolveOutputMode, type OutputMode } from "./output-mode.js";
+import { type OutputMode, resolveOutputMode } from "./output-mode.js";
 
 export interface CommandContext {
   client: ApiClient;
@@ -37,9 +37,7 @@ export interface ResolveContextOptions {
   requireLogin?: boolean;
 }
 
-export function resolveContext(
-  opts: ResolveContextOptions = {},
-): CommandContext {
+export function resolveContext(opts: ResolveContextOptions = {}): CommandContext {
   // Two-branch load: `requireLogin !== false` (default true) calls
   // `requireConfig()` which throws on missing config; otherwise we
   // tolerate absence (used by `auth login` / `auth logout`).

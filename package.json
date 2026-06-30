@@ -10,29 +10,63 @@
   "bin": {
     "reposmith": "dist/index.js"
   },
+  "exports": {
+    ".": "./dist/index.js",
+    "./package.json": "./package.json"
+  },
   "files": [
     "dist",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc --noEmit && tsup",
     "dev": "tsx src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist",
+    "publint": "publint",
+    "lint": "eslint src test",
+    "lint:fix": "eslint src test --fix",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
+    "prepublishOnly": "npm run build && npm run lint && npm test && npm run publint",
     "prepare": "npm run build"
   },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RepoSmithHQ/cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/RepoSmithHQ/cli/issues"
+  },
+  "homepage": "https://github.com/RepoSmithHQ/cli#readme",
+  "author": "Repo Smith <support@reposmith.com>",
   "dependencies": {
     "@clack/prompts": "^0.7.0",
     "citty": "^0.1.6",
     "open": "^10.1.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^20.0.0",
+    "eslint": "^10.6.0",
+    "eslint-plugin-simple-import-sort": "^13.0.0",
+    "prettier": "^3.9.4",
+    "publint": "^0.3.21",
+    "tsup": "^8.5.1",
     "tsx": "^4.0.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "typescript-eslint": "^8.62.1",
+    "vitest": "^4.1.9"
   },
   "keywords": [
     "github",
     "backup",
-    "cli"
+    "cli",
+    "reposmith"
   ]
 }

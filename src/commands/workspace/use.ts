@@ -1,7 +1,7 @@
 import { defineCommand } from "citty";
 
-import { loadConfig, saveConfig } from "../../lib/config.js";
 import { resolveContext, runCommand } from "../../lib/command-context.js";
+import { loadConfig, saveConfig } from "../../lib/config.js";
 import { logSuccess } from "../../lib/output.js";
 import type { WorkspaceSummary } from "../../lib/types.js";
 
@@ -43,7 +43,9 @@ export const workspaceUseCommand = defineCommand({
         return;
       }
 
-      const byName = me.workspaces.filter((w: WorkspaceSummary) => w.name.toLowerCase() === needle);
+      const byName = me.workspaces.filter(
+        (w: WorkspaceSummary) => w.name.toLowerCase() === needle,
+      );
       if (byName.length === 1) {
         persistAndReport(ctx.apiUrl, byName[0].id, byName[0].name);
         return;
@@ -62,9 +64,7 @@ export const workspaceUseCommand = defineCommand({
       // No exact id match, no unique name match → ambiguous or
       // unknown. Print the available workspaces to help the user
       // spot the typo.
-      process.stderr.write(
-        `No workspace found matching "${needle}". Available:\n`,
-      );
+      process.stderr.write(`No workspace found matching "${needle}". Available:\n`);
       for (const w of me.workspaces) {
         process.stderr.write(`  • ${w.id}  ${w.name}\n`);
       }

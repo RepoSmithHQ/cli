@@ -1,17 +1,21 @@
 # Repo Smith CLI
 
-The `reposmith` command-line tool — manage your GitHub backups from the terminal.
+[![npm version](https://img.shields.io/npm/v/@reposmith/cli)](https://www.npmjs.com/package/@reposmith/cli)
+[![CI](https://img.shields.io/github/actions/workflow/status/RepoSmithHQ/cli/ci.yml?branch=main)](https://github.com/RepoSmithHQ/cli/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
+The `reposmith` command-line tool — manage your GitHub backups from the terminal. Browse backups, list jobs, and download archive tarballs for any repository you've connected to [Repo Smith](https://reposmith.com). Every command also speaks JSON for piping into `jq`, `fzf`, or your shell pipeline.
 
 This package is **independent of the Repo Smith web app** — it talks to a public HTTP API (`/api/cli/v1/*`) and stores its config locally. It does not import or depend on anything in `../web/` at runtime.
 
 ## Install
 
 ```bash
-# from the repo
+# from the repo (for development)
 cd cli && npm install && npm run build && npm link
 
-# or from npm (once published)
-npm install -g reposmith
+# from npm (once published)
+npm install -g @reposmith/cli
 ```
 
 Node 20+ is required (uses the built-in `fetch` and `Response.body.getReader()`).
@@ -99,6 +103,25 @@ The CLI uses a dedicated API key issued by the Repo Smith server. Keys are 90 da
 **Keys are scoped to the CLI only.** A CLI key is rejected by every `/api/*` route (the session middleware doesn't accept `Authorization: Bearer` for non-CLI routes). A regular session cookie is rejected by every `/api/cli/*` route (the CLI middleware doesn't accept session cookies). The two namespaces are isolated by design.
 
 The CLI never sees your password. 2FA works for free: the web app enforces TOTP before the user can click Approve, so the CLI doesn't have to.
+
+## Releasing
+
+Publishing is manual for v0.1.0 — every PR runs the CI workflow (`.github/workflows/ci.yml`) as a required check, so by the time you tag, you know the build is green.
+
+```bash
+# 1. Bump version (creates a commit + tag)
+npm version patch    # 0.1.0 → 0.1.1
+# or `npm version minor` / `npm version major`
+
+# 2. Build + verify (prepublishOnly does this automatically)
+npm run build && npm run publint
+
+# 3. Publish to npm
+npm publish --access public
+
+# 4. Push the tag
+git push --follow-tags
+```
 
 ## License
 

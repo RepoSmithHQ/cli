@@ -29,8 +29,7 @@ import { loginFlow } from "../../lib/auth.js";
 export const authCommand = defineCommand({
   meta: {
     name: "login",
-    description:
-      "Authenticate via browser — opens the Repo Smith web app for approval.",
+    description: "Authenticate via browser — opens the Repo Smith web app for approval.",
   },
   async run() {
     await loginFlow();

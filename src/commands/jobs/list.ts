@@ -1,6 +1,10 @@
 import { defineCommand } from "citty";
 
-import { resolveActiveWorkspaceId, resolveContext, runCommand } from "../../lib/command-context.js";
+import {
+  resolveActiveWorkspaceId,
+  resolveContext,
+  runCommand,
+} from "../../lib/command-context.js";
 import { loadConfig } from "../../lib/config.js";
 import { printJson, printOutput, printTable } from "../../lib/output.js";
 import { JOB_STATUSES } from "./_status-filter.js";
@@ -14,8 +18,7 @@ export const jobsListCommand = defineCommand({
     workspace: {
       type: "string",
       alias: "w",
-      description:
-        "Workspace id (defaults to the one set by `reposmith workspace use`).",
+      description: "Workspace id (defaults to the one set by `reposmith workspace use`).",
     },
     limit: {
       type: "string",
@@ -43,7 +46,10 @@ export const jobsListCommand = defineCommand({
     await runCommand(async () => {
       const ctx = resolveContext({ json: args.json });
       const cfg = loadConfig();
-      const wsId = resolveActiveWorkspaceId(args.workspace as string | undefined, cfg ?? {});
+      const wsId = resolveActiveWorkspaceId(
+        args.workspace as string | undefined,
+        cfg ?? {},
+      );
       if (!wsId) {
         process.stderr.write(
           "No active workspace. Run `reposmith workspace use <id>` first.\n",
@@ -62,7 +68,7 @@ export const jobsListCommand = defineCommand({
       const result = await ctx.client.listJobs(wsId, {
         limit: parseLimitOrThrow(args.limit as string, "limit"),
         offset: parseOffsetOrThrow(args.offset as string),
-        ...(status ? { status: status as typeof JOB_STATUSES[number] } : {}),
+        ...(status ? { status: status as (typeof JOB_STATUSES)[number] } : {}),
       });
 
       printOutput(
@@ -70,7 +76,11 @@ export const jobsListCommand = defineCommand({
         () => printJson(result),
         () => {
           const rows = result.items.map((r) => {
-            const job = (r as { job?: Record<string, unknown> } | Record<string, unknown>) as Record<string, unknown>;
+            const job = r as
+              { job?: Record<string, unknown> } | Record<string, unknown> as Record<
+              string,
+              unknown
+            >;
             const obj = (job.job ?? job) as Record<string, unknown>;
             return [
               String(obj.id ?? ""),
@@ -80,10 +90,7 @@ export const jobsListCommand = defineCommand({
               String(obj.updatedAt ?? ""),
             ];
           });
-          printTable(
-            ["ID", "STATUS", "REPO", "CREATED", "UPDATED"],
-            rows,
-          );
+          printTable(["ID", "STATUS", "REPO", "CREATED", "UPDATED"], rows);
           if (result.hasMore) {
             process.stderr.write(
               `… more results available. Use --offset ${result.nextOffset ?? result.items.length} to continue.\n`,

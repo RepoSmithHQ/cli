@@ -4,12 +4,7 @@
 // crash instead of a silent mismatch.
 
 export type EncryptionMode = "none" | "password" | "archive";
-export type JobStatus =
-  | "pending"
-  | "cloning"
-  | "uploading"
-  | "succeeded"
-  | "failed";
+export type JobStatus = "pending" | "cloning" | "uploading" | "succeeded" | "failed";
 
 export interface CliUser {
   id: string;
@@ -118,5 +113,4 @@ export interface ArchiveRestorePendingResponse {
 }
 
 export type ArchiveDownloadResponse =
-  | ArchiveStreamResponse
-  | ArchiveRestorePendingResponse;
+  ArchiveStreamResponse | ArchiveRestorePendingResponse;

@@ -99,9 +99,8 @@ export async function downloadWithProgress(
         const now = Date.now();
         if (now - lastPrint >= PROGRESS_INTERVAL_MS) {
           lastPrint = now;
-          const pct = total > 0
-            ? Math.min(100, Math.round((transferred / total) * 100))
-            : 0;
+          const pct =
+            total > 0 ? Math.min(100, Math.round((transferred / total) * 100)) : 0;
           out.write(
             `\r${formatBytes(transferred)} / ${
               total > 0 ? formatBytes(total) : "? B"

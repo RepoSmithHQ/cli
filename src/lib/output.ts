@@ -44,10 +44,7 @@ export function printTable(headers: string[], rows: string[][]): void {
     return max;
   });
 
-  const fmt = (cells: string[]) =>
-    cells
-      .map((c, i) => c.padEnd(widths[i]))
-      .join("  ");
+  const fmt = (cells: string[]) => cells.map((c, i) => c.padEnd(widths[i])).join("  ");
 
   const headerLine = fmt(headers.map((h) => color(h.toUpperCase(), BOLD)));
   const separator = fmt(widths.map((w) => "─".repeat(w)));
@@ -87,11 +84,7 @@ export function logSuccess(message: string): void {
  *   if (mode === "json") printJson(data);
  *   else printTable(headers, rows);
  */
-export function printOutput(
-  mode: OutputMode,
-  json: () => void,
-  table: () => void,
-): void {
+export function printOutput(mode: OutputMode, json: () => void, table: () => void): void {
   if (mode === "json") json();
   else table();
 }

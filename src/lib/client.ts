@@ -120,7 +120,11 @@ export class ApiClient {
         parsed = JSON.parse(text);
       } catch {
         if (!res.ok) {
-          throw new ApiError(res.status, text, `HTTP ${res.status}: ${text.slice(0, 200)}`);
+          throw new ApiError(
+            res.status,
+            text,
+            `HTTP ${res.status}: ${text.slice(0, 200)}`,
+          );
         }
         return text as unknown as T;
       }
@@ -183,7 +187,11 @@ export class ApiClient {
         parsed = JSON.parse(text);
       } catch {
         if (!res.ok) {
-          throw new ApiError(res.status, text, `HTTP ${res.status}: ${text.slice(0, 200)}`);
+          throw new ApiError(
+            res.status,
+            text,
+            `HTTP ${res.status}: ${text.slice(0, 200)}`,
+          );
         }
         return text as unknown as T;
       }
@@ -210,10 +218,7 @@ export class ApiClient {
    * (full URL — plugin builds it from `baseURL`) plus the polling
    * interval the server expects.
    */
-  requestDeviceCode(
-    clientId: string,
-    scope?: string,
-  ): Promise<DeviceCodeResponse> {
+  requestDeviceCode(clientId: string, scope?: string): Promise<DeviceCodeResponse> {
     return this.rawRequest<DeviceCodeResponse>("POST", "/api/auth/device/code", {
       body: scope ? { client_id: clientId, scope } : { client_id: clientId },
     });
@@ -250,28 +255,16 @@ export class ApiClient {
           error_description?: string;
         };
         if (body.error === "authorization_pending") {
-          throw new DeviceFlowError(
-            "pending",
-            body.error_description ?? "",
-          );
+          throw new DeviceFlowError("pending", body.error_description ?? "");
         }
         if (body.error === "slow_down") {
-          throw new DeviceFlowError(
-            "slow_down",
-            body.error_description ?? "",
-          );
+          throw new DeviceFlowError("slow_down", body.error_description ?? "");
         }
         if (body.error === "access_denied") {
-          throw new DeviceFlowError(
-            "denied",
-            body.error_description ?? "",
-          );
+          throw new DeviceFlowError("denied", body.error_description ?? "");
         }
         if (body.error === "expired_token") {
-          throw new DeviceFlowError(
-            "expired",
-            body.error_description ?? "",
-          );
+          throw new DeviceFlowError("expired", body.error_description ?? "");
         }
       }
       throw err;
@@ -286,13 +279,9 @@ export class ApiClient {
    * `permissions: { cli: ["read"] }`, and returns it.
    */
   exchangeSessionForCliKey(sessionToken: string): Promise<LoginResponse> {
-    return this.rawRequest<LoginResponse>(
-      "POST",
-      "/api/cli/v1/auth/device-exchange",
-      {
-        headers: { Authorization: `Bearer ${sessionToken}` },
-      },
-    );
+    return this.rawRequest<LoginResponse>("POST", "/api/cli/v1/auth/device-exchange", {
+      headers: { Authorization: `Bearer ${sessionToken}` },
+    });
   }
 
   logout(): Promise<{ success: true }> {
@@ -328,10 +317,7 @@ export class ApiClient {
   }
 
   // ── Jobs ────────────────────────────────────────────────────────
-  listJobs(
-    workspaceId: string,
-    opts: ListJobsOptions = {},
-  ): Promise<ListJobsResponse> {
+  listJobs(workspaceId: string, opts: ListJobsOptions = {}): Promise<ListJobsResponse> {
     const params = new URLSearchParams();
     if (opts.limit !== undefined) params.set("limit", String(opts.limit));
     if (opts.offset !== undefined) params.set("offset", String(opts.offset));

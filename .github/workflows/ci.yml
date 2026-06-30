@@ -1,0 +1,36 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # tsc --noEmit runs as part of `build`, so this catches
+      # type errors before we ship. Tests come next — `vitest`
+      # is added in Phase D; the step is here so the workflow
+      # is ready the moment the test files land. For now it
+      # exits 0 because there's nothing to run.
+      - run: npm test
+
+      - run: npm run build
+
+      # publint catches every common publish-time mistake:
+      # missing `publishConfig.access`, files array pointing at
+      # things that don't exist, `exports` vs `main` mismatch,
+      # wrong syntax for the Node target, etc. Required on
+      # every PR — once this is a required check on `main`, a
+      # passing build here means `npm publish` will succeed.
+      - run: npm run publint

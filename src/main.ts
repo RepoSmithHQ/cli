@@ -17,22 +17,21 @@
 
 import { defineCommand } from "citty";
 
+import { archivesDownloadCommand } from "./commands/archives/download.js";
 import { authCommand } from "./commands/auth/login.js";
 import { authLogoutCommand } from "./commands/auth/logout.js";
+import { jobsGetCommand } from "./commands/jobs/get.js";
+import { jobsListCommand } from "./commands/jobs/list.js";
+import { reposGetCommand } from "./commands/repos/get.js";
+import { reposListCommand } from "./commands/repos/list.js";
 import { workspaceListCommand } from "./commands/workspace/list.js";
 import { workspaceUseCommand } from "./commands/workspace/use.js";
-import { reposListCommand } from "./commands/repos/list.js";
-import { reposGetCommand } from "./commands/repos/get.js";
-import { jobsListCommand } from "./commands/jobs/list.js";
-import { jobsGetCommand } from "./commands/jobs/get.js";
-import { archivesDownloadCommand } from "./commands/archives/download.js";
 
 export const main = defineCommand({
   meta: {
     name: "reposmith",
     version: "0.1.0",
-    description:
-      "Repo Smith CLI — manage your GitHub backups from the terminal.",
+    description: "Repo Smith CLI — manage your GitHub backups from the terminal.",
   },
   args: {
     json: {
@@ -45,7 +44,10 @@ export const main = defineCommand({
   },
   subCommands: {
     auth: defineCommand({
-      meta: { name: "auth", description: "Authenticate with Repo Smith (login, logout)." },
+      meta: {
+        name: "auth",
+        description: "Authenticate with Repo Smith (login, logout).",
+      },
       subCommands: {
         login: authCommand,
         logout: authLogoutCommand,
@@ -59,7 +61,10 @@ export const main = defineCommand({
       },
     }),
     repos: defineCommand({
-      meta: { name: "repos", description: "List and inspect repositories in a workspace." },
+      meta: {
+        name: "repos",
+        description: "List and inspect repositories in a workspace.",
+      },
       subCommands: {
         list: reposListCommand,
         get: reposGetCommand,

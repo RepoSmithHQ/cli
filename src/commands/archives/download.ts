@@ -3,8 +3,8 @@ import { resolve as resolvePath } from "node:path";
 import { defineCommand } from "citty";
 
 import { resolveContext, runCommand } from "../../lib/command-context.js";
-import { downloadWithProgress } from "../../lib/progress.js";
 import { logInfo, logSuccess } from "../../lib/output.js";
+import { downloadWithProgress } from "../../lib/progress.js";
 
 /**
  * `reposmith archives download <job-id> [--out path]`
@@ -78,10 +78,7 @@ export const archivesDownloadCommand = defineCommand({
   },
 });
 
-function resolveOutPath(
-  explicit: string | undefined,
-  defaultFilename: string,
-): string {
+function resolveOutPath(explicit: string | undefined, defaultFilename: string): string {
   if (explicit && explicit.length > 0) {
     return resolvePath(process.cwd(), explicit);
   }

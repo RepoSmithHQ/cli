@@ -1,6 +1,10 @@
 import { defineCommand } from "citty";
 
-import { resolveActiveWorkspaceId, resolveContext, runCommand } from "../../lib/command-context.js";
+import {
+  resolveActiveWorkspaceId,
+  resolveContext,
+  runCommand,
+} from "../../lib/command-context.js";
 import { loadConfig } from "../../lib/config.js";
 import { printJson, printOutput, printTable } from "../../lib/output.js";
 
@@ -13,8 +17,7 @@ export const reposListCommand = defineCommand({
     workspace: {
       type: "string",
       alias: "w",
-      description:
-        "Workspace id (defaults to the one set by `reposmith workspace use`).",
+      description: "Workspace id (defaults to the one set by `reposmith workspace use`).",
     },
     limit: {
       type: "string",
@@ -42,7 +45,10 @@ export const reposListCommand = defineCommand({
     await runCommand(async () => {
       const ctx = resolveContext({ json: args.json });
       const cfg = loadConfig();
-      const wsId = resolveActiveWorkspaceId(args.workspace as string | undefined, cfg ?? {});
+      const wsId = resolveActiveWorkspaceId(
+        args.workspace as string | undefined,
+        cfg ?? {},
+      );
       if (!wsId) {
         process.stderr.write(
           "No active workspace. Run `reposmith workspace use <id>` first.\n",
@@ -73,10 +79,7 @@ export const reposListCommand = defineCommand({
               String(lastBackup),
             ];
           });
-          printTable(
-            ["ID", "NAME", "EXTERNAL ID", "LATEST JOB", "LAST BACKUP"],
-            rows,
-          );
+          printTable(["ID", "NAME", "EXTERNAL ID", "LATEST JOB", "LAST BACKUP"], rows);
           if (result.hasMore) {
             process.stderr.write(
               `… more results available. Use --offset ${result.nextOffset ?? result.items.length} to continue.\n`,
