@@ -1,11 +1,12 @@
 // `config.ts` reads/writes the local config at
-// `${XDG_CONFIG_HOME:-~/.config}/reposmith/config.json`. Most of
-// the behavior is small and worth pinning — the security-relevant
-// bits (no token = throw, mode 0600 best-effort) especially so
-// a future refactor doesn't accidentally drop them.
+// `~/.config/reposmith/config.json`. Most of the behavior is small
+// and worth pinning — the security-relevant bits (no token = throw,
+// mode 0600 best-effort) especially so a future refactor doesn't
+// accidentally drop them.
 //
-// We redirect `XDG_CONFIG_HOME` to a temp dir per test so we
-// never touch the developer's real `~/.config/reposmith/`.
+// We redirect `HOME` to a temp dir per test (which `os.homedir()`
+// honors on Unix) so we never touch the developer's real
+// `~/.config/reposmith/`.
 
 import {
   chmodSync,
@@ -32,11 +33,11 @@ import {
 import { NotLoggedInError } from "../src/lib/errors.js";
 
 let workDir: string;
-const originalXdg = process.env.XDG_CONFIG_HOME;
+const originalHome = process.env.HOME;
 
 beforeEach(() => {
-  workDir = mkdtempSync(join(tmpdir(), "reposmith-config-"));
-  process.env.XDG_CONFIG_HOME = workDir;
+  workDir = mkdtempSync(join(tmpdir(), "reposmith-home-"));
+  process.env.HOME = workDir;
 });
 
 afterEach(() => {
@@ -46,10 +47,10 @@ afterEach(() => {
   clearConfig();
   rmSync(workDir, { recursive: true, force: true });
 
-  if (originalXdg === undefined) {
-    delete process.env.XDG_CONFIG_HOME;
+  if (originalHome === undefined) {
+    delete process.env.HOME;
   } else {
-    process.env.XDG_CONFIG_HOME = originalXdg;
+    process.env.HOME = originalHome;
   }
 });
 
@@ -59,13 +60,13 @@ describe("loadConfig", () => {
   });
 
   it("returns null when the file exists but is not valid JSON", () => {
-    mkdirSync(join(workDir, "reposmith"), { recursive: true });
+    mkdirSync(join(workDir, ".config", "reposmith"), { recursive: true });
     writeRawConfig("{ not valid json");
     expect(loadConfig()).toBeNull();
   });
 
   it("returns null when the file is empty", () => {
-    mkdirSync(join(workDir, "reposmith"), { recursive: true });
+    mkdirSync(join(workDir, ".config", "reposmith"), { recursive: true });
     writeRawConfig("");
     expect(loadConfig()).toBeNull();
   });
@@ -73,7 +74,7 @@ describe("loadConfig", () => {
   it("returns null when the file parses to a non-object", () => {
     // Top-level JSON primitives — `null`, numbers, strings —
     // are not objects and should produce null.
-    mkdirSync(join(workDir, "reposmith"), { recursive: true });
+    mkdirSync(join(workDir, ".config", "reposmith"), { recursive: true });
     writeRawConfig("42");
     expect(loadConfig()).toBeNull();
 
@@ -131,9 +132,9 @@ describe("loadConfig", () => {
 
 describe("saveConfig", () => {
   it("creates the config directory if it doesn't exist", () => {
-    expect(existsSync(join(workDir, "reposmith"))).toBe(false);
+    expect(existsSync(join(workDir, ".config", "reposmith"))).toBe(false);
     saveConfig({ apiUrl: "https://x", token: "t" });
-    expect(existsSync(join(workDir, "reposmith"))).toBe(true);
+    expect(existsSync(join(workDir, ".config", "reposmith"))).toBe(true);
     expect(existsSync(configFilePath())).toBe(true);
   });
 
@@ -144,7 +145,7 @@ describe("saveConfig", () => {
   });
 
   it("tightens permissions to 0600 if the file already existed with wider perms", () => {
-    mkdirSync(join(workDir, "reposmith"), { recursive: true });
+    mkdirSync(join(workDir, ".config", "reposmith"), { recursive: true });
     writeRawConfig(JSON.stringify({ apiUrl: "https://old", token: "t" }));
     // Simulate a wider mode from a previous bug or external edit.
     chmodSync(configFilePath(), 0o644);
@@ -192,7 +193,7 @@ describe("requireConfig", () => {
 // ── helpers ─────────────────────────────────────────────────────
 
 function writeRawConfig(text: string): void {
-  mkdirSync(join(workDir, "reposmith"), { recursive: true });
+  mkdirSync(join(workDir, ".config", "reposmith"), { recursive: true });
   writeFileSync(configFilePath(), text);
 }
 

@@ -1,8 +1,8 @@
 // Local config persistence.
 //
-// Stores `Config` at `${XDG_CONFIG_HOME:-~/.config}/reposmith/config.json`
-// with mode 0600. The file holds only the API base URL (overridable
-// via env), the CLI bearer token, and the last workspace the user
+// Stores `Config` at `~/.config/reposmith/config.json` with mode
+// 0600. The file holds only the API base URL (overridable via
+// env), the CLI bearer token, and the last workspace the user
 // picked. The token is what a leaked laptop would expose — the
 // `0600` mode is the only protection, since the CLI does no
 // encryption at rest.
@@ -31,9 +31,7 @@ const CONFIG_DIR_NAME = "reposmith";
 const CONFIG_FILE_NAME = "config.json";
 
 function configPath(): string {
-  const xdg = process.env.XDG_CONFIG_HOME;
-  const base = xdg && xdg.length > 0 ? xdg : join(homedir(), ".config");
-  return join(base, CONFIG_DIR_NAME, CONFIG_FILE_NAME);
+  return join(homedir(), ".config", CONFIG_DIR_NAME, CONFIG_FILE_NAME);
 }
 
 export function loadConfig(): Config | null {
