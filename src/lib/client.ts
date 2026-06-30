@@ -25,11 +25,18 @@ import type {
   LoginResponse,
   MeResponse,
 } from "./types.js";
+import { USER_AGENT } from "./version.js";
 
 export interface ApiClientOptions {
   baseUrl: string;
   token?: string;
   fetchImpl?: typeof fetch;
+  /**
+   * Override the `User-Agent` header sent on every request. Defaults
+   * to `reposmith-cli/<version> (node/<runtime>)`. Tests inject a
+   * stable value so they can assert on it.
+   */
+  userAgent?: string;
 }
 
 export interface ListRepositoriesOptions {
@@ -63,6 +70,7 @@ export class ApiClient {
   private baseUrl: string;
   private token: string | undefined;
   private fetchImpl: typeof fetch;
+  private userAgent: string;
 
   constructor(opts: ApiClientOptions) {
     this.baseUrl = opts.baseUrl.replace(/\/+$/, "");
@@ -70,6 +78,7 @@ export class ApiClient {
     // Allow tests to inject a mock fetch. Node 20+ exposes `fetch`
     // globally so the default just uses that.
     this.fetchImpl = opts.fetchImpl ?? globalThis.fetch;
+    this.userAgent = opts.userAgent ?? USER_AGENT;
     if (typeof this.fetchImpl !== "function") {
       throw new Error("No fetch implementation available — Node 20+ required");
     }
@@ -93,6 +102,7 @@ export class ApiClient {
     const url = `${this.baseUrl}${path}`;
     const headers: Record<string, string> = {
       Accept: "application/json",
+      "User-Agent": this.userAgent,
     };
     if (this.token) {
       headers.Authorization = `Bearer ${this.token}`;
@@ -166,6 +176,7 @@ export class ApiClient {
     const url = `${this.baseUrl}${path}`;
     const headers: Record<string, string> = {
       Accept: "application/json",
+      "User-Agent": this.userAgent,
       ...(init?.headers ?? {}),
     };
     let body: string | undefined;
