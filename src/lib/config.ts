@@ -15,10 +15,11 @@ import { chmodSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
+import { DEFAULT_API_URL } from "./consts.js";
 import { NotLoggedInError } from "./errors.js";
 
 export interface Config {
-  /** API base URL (default `https://api.reposmith.dev`). */
+  /** API base URL (default `DEFAULT_API_URL` from `./consts.ts`). */
   apiUrl: string;
   /** Bearer token returned by `POST /api/cli/v1/auth/login`. */
   token?: string;
@@ -56,7 +57,7 @@ export function loadConfig(): Config | null {
     apiUrl:
       typeof obj.apiUrl === "string" && obj.apiUrl.length > 0
         ? obj.apiUrl
-        : "https://api.reposmith.dev",
+        : DEFAULT_API_URL,
   };
   if (typeof obj.token === "string") config.token = obj.token;
   if (typeof obj.workspaceId === "string") config.workspaceId = obj.workspaceId;

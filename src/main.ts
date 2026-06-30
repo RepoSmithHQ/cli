@@ -9,9 +9,11 @@
 //   jobs list, jobs get
 //   archives download
 //
-// `--api` overrides the API base URL for one invocation
-// (equivalent to setting `REPOSMITH_API`). Useful for pointing the
-// CLI at a local dev server.
+// The API base URL is resolved from `REPOSMITH_API` (env) → config
+// → `DEFAULT_API_URL` (see `src/lib/consts.ts`). Useful for pointing
+// the CLI at a local dev server:
+//
+//   REPOSMITH_API=http://localhost:3000 reposmith auth login
 
 import { defineCommand } from "citty";
 
@@ -39,11 +41,6 @@ export const main = defineCommand({
       description:
         "Output JSON instead of a human-readable table (also implied when stdout is piped).",
       default: false,
-    },
-    api: {
-      type: "string",
-      description:
-        "Override the API base URL (default: $REPOSMITH_API or https://api.reposmith.dev).",
     },
   },
   subCommands: {
@@ -88,5 +85,4 @@ export const main = defineCommand({
 // `import { resolveContext } from "../main"`.
 export type RootArgs = {
   json: boolean;
-  api?: string;
 };

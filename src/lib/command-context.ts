@@ -3,7 +3,6 @@
 // `resolveContext` is the single place that:
 //   - loads the config (throwing NotLoggedInError if absent),
 //   - constructs an `ApiClient` with the right base URL,
-//   - applies the `--api` flag override if the caller passed one,
 //   - returns the parsed output mode.
 //
 // Commands call it at the top instead of inlining the same five
@@ -13,12 +12,13 @@
 
 import { ApiClient } from "./client.js";
 import { loadConfig, requireConfig } from "./config.js";
+import { DEFAULT_API_URL } from "./consts.js";
 import { ApiError, NotLoggedInError } from "./errors.js";
 import { resolveOutputMode, type OutputMode } from "./output-mode.js";
 
 export interface CommandContext {
   client: ApiClient;
-  /** Resolved API base URL (after `--api` override). */
+  /** Resolved API base URL. */
   apiUrl: string;
   /** Config-loaded workspace id (or undefined if none set). */
   workspaceId: string | undefined;
@@ -27,8 +27,6 @@ export interface CommandContext {
 }
 
 export interface ResolveContextOptions {
-  /** `--api` flag override (may be undefined). */
-  apiOverride?: string;
   /** `--json` flag value (may be undefined → defaults to TTY). */
   json?: boolean;
   /**
@@ -48,18 +46,16 @@ export function resolveContext(
   const requireLogin = opts.requireLogin !== false;
 
   // Priority for apiUrl:
-  //   1. `--api` flag override (explicit one-off)
-  //   2. `REPOSMITH_API` env var
-  //   3. `Config.apiUrl` (set by an earlier `reposmith auth login`
+  //   1. `REPOSMITH_API` env var (one-off override, e.g. local dev)
+  //   2. `Config.apiUrl` (set by an earlier `reposmith auth login`
   //      against a custom host — the user has told us about it)
-  //   4. Production default
+  //   3. `DEFAULT_API_URL` from `./consts.ts`
   const fromEnv = process.env.REPOSMITH_API;
   const cfg = requireLogin ? requireConfig() : loadConfig();
   const apiUrl =
-    opts.apiOverride ??
     (fromEnv && fromEnv.length > 0 ? fromEnv : undefined) ??
     cfg?.apiUrl ??
-    "https://api.reposmith.dev";
+    DEFAULT_API_URL;
 
   if (requireLogin) {
     // `cfg` is `Config` (non-null) here — `requireConfig()` typed

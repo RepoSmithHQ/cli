@@ -32,13 +32,7 @@ export const authCommand = defineCommand({
     description:
       "Authenticate via browser — opens the Repo Smith web app for approval.",
   },
-  args: {
-    api: {
-      type: "string",
-      description: "Override the API base URL for this invocation.",
-    },
-  },
-  async run({ args }) {
-    await loginFlow({ ...(args.api ? { apiUrl: args.api } : {}) });
+  async run() {
+    await loginFlow();
   },
 });
