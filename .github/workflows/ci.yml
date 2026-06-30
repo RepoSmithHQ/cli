@@ -18,6 +18,13 @@ jobs:
 
       - run: npm ci
 
+      # Lint runs first so cheap style / correctness checks fail
+      # the PR before we spend CI minutes on tests + build. Until
+      # now this only ran via `prepublishOnly` during releases —
+      # which meant a rule violation could merge unnoticed and
+      # only block the npm publish.
+      - run: npm run lint
+
       # tsc --noEmit runs as part of `build`, so this catches
       # type errors before we ship. Tests come next — `vitest`
       # is added in Phase D; the step is here so the workflow
