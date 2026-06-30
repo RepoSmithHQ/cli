@@ -1,8 +1,8 @@
-// Output helpers — table (TTY default) and JSON (piped / --json).
+// Output helpers — table (default) and JSON (opt-in via --json).
 //
 // Each `print*` function picks the right one based on the
 // `OutputMode` passed in from the command (which is derived from
-// `--json` and `process.stdout.isTTY`). Commands don't branch on
+// `--json` — see `output-mode.ts`). Commands don't branch on
 // TTY themselves; they always call `printOutput(mode, …)`.
 
 import type { OutputMode } from "./output-mode.js";
@@ -37,6 +37,13 @@ function color(s: string, code: string): string {
  * cells (>40 chars) are not truncated — wrapping makes the output
  * unreadable in terminals; the user can pipe to `less` for paginated
  * reading or pass `--json` to redirect to a file.
+ *
+ * ANSI handling: when stdout is a TTY, the header row gets a BOLD
+ * style and the separator gets DIM. `padEnd` counts the visible
+ * characters only, so the colored cells line up with the uncolored
+ * data rows. (Earlier versions padded AFTER wrapping in escape
+ * codes, so the escapes ate 8 bytes per cell and the headers shifted
+ * several columns to the left of the body.)
  */
 export function printTable(headers: string[], rows: string[][]): void {
   if (rows.length === 0) {
@@ -53,13 +60,23 @@ export function printTable(headers: string[], rows: string[][]): void {
     return max;
   });
 
-  const fmt = (cells: string[]) => cells.map((c, i) => c.padEnd(widths[i])).join("  ");
+  // Pad the visible text first, THEN wrap with ANSI escapes — so
+  // `padEnd` measures rendered columns, not raw byte length.
+  const padVisible = (s: string, i: number) => s.padEnd(widths[i]);
 
-  const headerLine = fmt(headers.map((h) => color(h.toUpperCase(), BOLD)));
-  const separator = fmt(widths.map((w) => "─".repeat(w)));
+  // Header: pad, uppercase, then color. Color wraps the already-padded
+  // string so ANSI escape bytes don't count toward column width.
+  const headerCells = headers.map((h, i) => color(padVisible(h.toUpperCase(), i), BOLD));
+  const headerLine = headerCells.join("  ");
+
+  // Separator: pad the dash run to the column width, then dim it.
+  const separatorCells = widths.map((w) => color("─".repeat(w).padEnd(w), DIM));
+  const separator = separatorCells.join("  ");
 
   console.log(headerLine);
-  console.log(color(separator, DIM));
+  console.log(separator);
+  // Data rows are uncolored, so plain padEnd is fine.
+  const fmt = (cells: string[]) => cells.map((c, i) => c.padEnd(widths[i])).join("  ");
   for (const row of rows) {
     console.log(fmt(row));
   }

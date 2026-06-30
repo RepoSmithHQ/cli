@@ -7,8 +7,8 @@ import {
 } from "../../lib/command-context.js";
 import { loadConfig } from "../../lib/config.js";
 import { CliError } from "../../lib/errors.js";
+import { formatTimestamp } from "../../lib/format.js";
 import { printJson, printOutput, printTable } from "../../lib/output.js";
-import { unwrapEnvelope } from "../../lib/types.js";
 import { JOB_STATUSES } from "./_status-filter.js";
 
 export const jobsListCommand = defineCommand({
@@ -72,20 +72,41 @@ export const jobsListCommand = defineCommand({
       });
 
       printOutput(
-        ctx.json ? "json" : "table",
+        ctx.json,
         () => printJson(result),
         () => {
+          // Curated columns: `updatedAt` and the full row are reachable
+          // via `jobs get <id>` or `--json`, so the at-a-glance table
+          // only needs the columns that answer "what job is this and
+          // where does it stand?".
+          //
+          // Read fields off the list item directly — DO NOT call
+          // `unwrapEnvelope` here. The list endpoint returns flat
+          // rows with a server-side `repository` JOIN, which would
+          // be mistaken for an envelope and yield the joined repo
+          // (whose id, name, etc. shadow the job fields).
+          //
+          // The REPO column prefers the joined repo's name (so the
+          // table stays readable when a workspace has many jobs for
+          // the same repo — UUIDs would all be identical) and falls
+          // back to the bare repositoryId if no join was returned.
           const rows = result.items.map((r) => {
-            const obj = unwrapEnvelope(r);
+            const obj = r as Record<string, unknown>;
+            const repoJoin = obj.repository as Record<string, unknown> | null | undefined;
+            const repoName = repoJoin?.name;
+            const repoCell = (
+              typeof repoName === "string" && repoName.length > 0
+                ? repoName
+                : String(obj.repositoryId ?? "")
+            ) as string;
             return [
               String(obj.id ?? ""),
               String(obj.status ?? ""),
-              String(obj.repositoryId ?? ""),
-              String(obj.createdAt ?? ""),
-              String(obj.updatedAt ?? ""),
+              repoCell,
+              formatTimestamp(obj.createdAt as string | undefined),
             ];
           });
-          printTable(["ID", "STATUS", "REPO", "CREATED", "UPDATED"], rows);
+          printTable(["ID", "STATUS", "REPO", "CREATED"], rows);
           if (result.hasMore) {
             process.stderr.write(
               `… more results available. Use --offset ${result.nextOffset ?? result.items.length} to continue.\n`,

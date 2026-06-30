@@ -122,6 +122,14 @@ export type ArchiveDownloadResponse =
  * `unwrapEnvelope` picks the inner object when an envelope is
  * present and falls back to the input otherwise — so callers can
  * treat both shapes uniformly without nested casts.
+ *
+ * GOTCHA: only call this on `get` responses. List responses join
+ * related rows server-side, so a job list item may have
+ * `{ id, status, repositoryId, ..., repository: { id, name, ... } }`
+ * — calling `unwrapEnvelope` on that would return the joined
+ * `repository` (whose keys shadow the job fields), and the caller
+ * would read repo fields thinking they're job fields. List
+ * commands must read fields off the item directly.
  */
 export function unwrapEnvelope<T extends object>(value: T): T;
 export function unwrapEnvelope<T extends object>(value: { job?: T; repository?: T }): T;

@@ -7,6 +7,7 @@ import {
 } from "../../lib/command-context.js";
 import { loadConfig } from "../../lib/config.js";
 import { CliError } from "../../lib/errors.js";
+import { formatTimestamp } from "../../lib/format.js";
 import { printJson, printOutput, printTable } from "../../lib/output.js";
 import { unwrapEnvelope } from "../../lib/types.js";
 
@@ -64,23 +65,21 @@ export const reposListCommand = defineCommand({
       });
 
       printOutput(
-        ctx.json ? "json" : "table",
+        ctx.json,
         () => printJson(result),
         () => {
+          // Curated columns: `externalId` and the latest-job status
+          // are reachable via `repos get <id>` or `--json`. We keep
+          // `id` on the table itself because it's what the user
+          // copy-pastes into `repos get <id>` and `jobs get <id>` —
+          // surfacing it here saves a round trip just to find an id.
           const rows = result.items.map((r) => {
             const repo = unwrapEnvelope(r);
             const latest = r.latestJob as Record<string, unknown> | null | undefined;
-            const status = latest?.status ?? "—";
-            const lastBackup = latest?.createdAt ?? "—";
-            return [
-              String(repo.id ?? ""),
-              String(repo.name ?? ""),
-              String(repo.externalId ?? ""),
-              String(status),
-              String(lastBackup),
-            ];
+            const lastBackup = formatTimestamp(latest?.createdAt as string | undefined);
+            return [String(repo.id ?? ""), String(repo.name ?? ""), lastBackup];
           });
-          printTable(["ID", "NAME", "EXTERNAL ID", "LATEST JOB", "LAST BACKUP"], rows);
+          printTable(["ID", "NAME", "LAST BACKUP"], rows);
           if (result.hasMore) {
             process.stderr.write(
               `… more results available. Use --offset ${result.nextOffset ?? result.items.length} to continue.\n`,

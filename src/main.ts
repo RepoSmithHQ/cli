@@ -38,8 +38,7 @@ export const main = defineCommand({
     json: {
       type: "boolean",
       alias: "j",
-      description:
-        "Output JSON instead of a human-readable table (also implied when stdout is piped).",
+      description: "Output JSON instead of the default human-readable table.",
       default: false,
     },
   },

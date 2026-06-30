@@ -77,6 +77,37 @@ describe("printTable", () => {
       "A workspace with a really long name".length,
     );
   });
+
+  it("lines up headers with body rows when ANSI colors are on", () => {
+    // Regression: `color(text).padEnd(width)` used to under-pad
+    // because the ANSI escape bytes counted toward `width`, shifting
+    // colored headers several columns left of the uncolored body.
+    // Pin the rendered (ANSI-stripped) lengths instead — the header
+    // line must match the data lines exactly when colors are on.
+    const originalIsTTY = process.stdout.isTTY;
+    Object.defineProperty(process.stdout, "isTTY", { value: true, configurable: true });
+    try {
+      logSpy.mockClear();
+      printTable(
+        ["ID", "STATUS"],
+        [
+          ["367eab9b-c13c-4830-99b0-76020dc38c82", "succeeded"],
+          ["f6ac8957-a7d9-42e8-bf14-c6dbcee54284", "failed"],
+        ],
+      );
+      const lines = logSpy.mock.calls.map((c) => String(c[0]));
+      // Strip ANSI before comparing — escapes are zero-width but
+      // padEnd counts them as chars unless we wrap-after-padding.
+      const visible = lines.map((l) => l.replace(/\x1b\[[0-9;]*m/g, ""));
+      expect(visible[0].length).toBe(visible[1].length);
+      expect(visible[0].length).toBe(visible[2].length);
+    } finally {
+      Object.defineProperty(process.stdout, "isTTY", {
+        value: originalIsTTY,
+        configurable: true,
+      });
+    }
+  });
 });
 
 describe("printJson", () => {
