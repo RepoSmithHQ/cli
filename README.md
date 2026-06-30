@@ -40,6 +40,8 @@ Pass `--json` (or `-j`) to any list or get command to emit machine-readable outp
 
 Authenticate via browser — opens the Repo Smith web app for approval via the RFC 8628 device flow. After you click Approve, the CLI receives a scoped API key. Your password never reaches the CLI; 2FA is enforced by the web app before approval.
 
+If your account belongs to a single workspace, the CLI auto-selects it on login, so you can immediately run `reposmith repos list` etc. with no extra setup. When you belong to multiple workspaces, the CLI lists them and asks you to run `reposmith workspace use <id>` to pick one.
+
 ```
 reposmith auth login
 ```
@@ -85,7 +87,7 @@ reposmith workspace list --json | jq '.[0].id'
 
 ### `reposmith workspace use`
 
-Set the active workspace by id or unique name. Stored locally, defaults every subsequent `repos` and `jobs` command.
+Set the active workspace by id or unique name. Stored locally, defaults every subsequent `repos` and `jobs` command. You only need this if your account belongs to more than one workspace — `auth login` auto-selects the only workspace when there's just one.
 
 ```
 reposmith workspace use <id|name>

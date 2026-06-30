@@ -36,6 +36,12 @@
 //   ┌  Repo Smith CLI
 //   │
 //   └  Logged in as felipe@example.com
+//      1 workspace available — auto-selected:
+//        • Acme (id: ws_abc123, role: owner, plan: team)
+//
+//   ┌  Repo Smith CLI
+//   │
+//   └  Logged in as felipe@example.com
 //      2 workspaces available:
 //        • Acme (id: ws_abc123, role: owner, plan: team)
 //        • Personal (id: ws_def456, role: owner, plan: personal)
@@ -62,11 +68,26 @@ const CLI_SCOPE = "cli";
 export interface LoginResult {
   user: { id: string; email: string; name: string };
   workspaces: WorkspaceSummary[];
+  /**
+   * Set when loginFlow auto-selected the only available workspace.
+   * Undefined when the user has 0 or 2+ workspaces (no auto-pick
+   * is possible or warranted).
+   */
+  activeWorkspaceId?: string;
 }
 
-export async function loginFlow(opts?: { apiUrl?: string }): Promise<LoginResult> {
+export interface LoginOptions {
+  apiUrl?: string;
+  /** Test seam — passes through to `ApiClient`. Production callers omit it. */
+  fetchImpl?: typeof fetch;
+}
+
+export async function loginFlow(opts: LoginOptions = {}): Promise<LoginResult> {
   const apiUrl = opts?.apiUrl ?? resolveApiUrl();
-  const client = new ApiClient({ baseUrl: apiUrl });
+  const client = new ApiClient({
+    baseUrl: apiUrl,
+    ...(opts.fetchImpl ? { fetchImpl: opts.fetchImpl } : {}),
+  });
 
   intro("Repo Smith CLI");
 
@@ -182,14 +203,12 @@ export async function loginFlow(opts?: { apiUrl?: string }): Promise<LoginResult
   // scoped to `{ cli: ["read"] }`.
   const cliKey = await client.exchangeSessionForCliKey(sessionToken);
 
-  // Persist token + new apiUrl (preserve any workspaceId the
-  // user had selected before — would be lost otherwise).
+  // Persist token + apiUrl first so the post-login `me()` call is
+  // already authenticated (we re-use the bearer-token path).
+  // workspaceId is handled below after we know how many
+  // workspaces the user has.
   const existing = loadConfig();
-  saveConfig({
-    apiUrl,
-    token: cliKey.token,
-    ...(existing?.workspaceId ? { workspaceId: existing.workspaceId } : {}),
-  });
+  saveConfig({ apiUrl, token: cliKey.token });
 
   // ── 5. Display the result ─────────────────────────────────────
   // Re-use the bearer-token path for the post-login `me()` call:
@@ -214,8 +233,41 @@ export async function loginFlow(opts?: { apiUrl?: string }): Promise<LoginResult
       : "no plan";
     return `  • ${w.name} (id: ${w.id}, role: ${w.role}, ${planLabel})`;
   });
+
+  if (me.workspaces.length === 1) {
+    // No choice to make — auto-select the only workspace so the
+    // user can immediately run `reposmith repos list` etc. We
+    // overwrite any stale `workspaceId` in the saved config: with
+    // a single workspace available it is unambiguously the right
+    // one, so it also fixes the case where a previously-saved id
+    // points to a workspace the user no longer belongs to.
+    const only = me.workspaces[0];
+    saveConfig({
+      apiUrl,
+      token: cliKey.token,
+      workspaceId: only.id,
+    });
+    logSuccess(`Active workspace set to ${only.name} (${only.id}).`);
+    outro(`1 workspace available — auto-selected:\n${lines.join("\n")}`);
+    return {
+      user: cliKey.user,
+      workspaces: me.workspaces,
+      activeWorkspaceId: only.id,
+    };
+  }
+
+  // 2+ workspaces: preserve any previous selection the user had
+  // — they're already logged in, re-login shouldn't lose their
+  // pick — but tell them they can switch.
+  if (existing?.workspaceId) {
+    saveConfig({
+      apiUrl,
+      token: cliKey.token,
+      workspaceId: existing.workspaceId,
+    });
+  }
   outro(
-    `${me.workspaces.length} workspace${me.workspaces.length === 1 ? "" : "s"} available:\n${lines.join("\n")}\n\nRun: reposmith workspace use <id>`,
+    `${me.workspaces.length} workspaces available:\n${lines.join("\n")}\n\nRun: reposmith workspace use <id>`,
   );
 
   return {
