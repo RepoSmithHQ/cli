@@ -72,11 +72,12 @@ export async function downloadWithProgress(
 
   let transferred = 0;
   let lastPrint = 0;
-  let lastErr: unknown = null;
 
-  // Wrap the write stream so a write error during `pipe`-like
-  // streaming gets surfaced up the promise chain rather than
-  // crashing the process.
+  // `file.write("")` enqueues a zero-length chunk so we can ask
+  // Node whether the underlying queue is full — without
+  // advancing the on-disk file. Standard Node idiom for
+  // backpressure detection when you don't want to inline the
+  // logic at every `write()` site.
   const writeBackpressure = (): Promise<void> =>
     new Promise((resolve, reject) => {
       if (file.write("") === false) {
@@ -109,18 +110,16 @@ export async function downloadWithProgress(
         }
       }
     }
-  } catch (err) {
-    lastErr = err;
+  } finally {
+    // Always close the write stream, even on read/write failure —
+    // partial files on disk are the user's to clean up.
+    await new Promise<void>((resolve) => file.end(resolve));
   }
 
-  await new Promise<void>((resolve) => file.end(resolve));
-
-  if (lastErr !== null) {
-    throw lastErr;
-  }
-
-  // Clear the progress line on completion.
-  out.write(`\r${" ".repeat(80)}\r`);
+  // Clear the progress line on completion. `ESC[2K` erases the
+  // entire current line regardless of terminal width (the
+  // earlier 80-space-clear assumed an 80-column terminal).
+  out.write("\r\x1b[2K");
 
   // Sanity: verify the file on disk matches what we counted.
   let actual: number;

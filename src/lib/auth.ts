@@ -53,11 +53,11 @@
 // on disk is scoped to /api/cli/* — it can't be replayed against
 // the regular web API.
 
-import { intro, isCancel, outro, spinner } from "@clack/prompts";
+import { intro, outro, spinner } from "@clack/prompts";
 import open from "open";
 
 import { ApiClient, DeviceFlowError } from "./client.js";
-import { loadConfig, saveConfig } from "./config.js";
+import { clearConfig, loadConfig, saveConfig } from "./config.js";
 import { resolveApiUrl } from "./env.js";
 import { logSuccess } from "./output.js";
 import type { WorkspaceSummary } from "./types.js";
@@ -83,7 +83,7 @@ export interface LoginOptions {
 }
 
 export async function loginFlow(opts: LoginOptions = {}): Promise<LoginResult> {
-  const apiUrl = opts?.apiUrl ?? resolveApiUrl();
+  const apiUrl = opts.apiUrl ?? resolveApiUrl();
   const client = new ApiClient({
     baseUrl: apiUrl,
     ...(opts.fetchImpl ? { fetchImpl: opts.fetchImpl } : {}),
@@ -141,60 +141,52 @@ export async function loginFlow(opts: LoginOptions = {}): Promise<LoginResult> {
 
   // ── 3. Poll until better-auth approves the code ────────────────
   // RFC 8628 says: respect the server-supplied `interval`. Bump
-  // it by 5 s on each `slow_down`. Abort on `access_denied` /
-  // `expired_token` — those are terminal failures, no point
-  // retrying.
+  // it by 5 s on each `slow_down` (cumulatively — spec says the
+  // new interval applies to this and all subsequent polls).
+  // Abort on `access_denied` / `expired_token` — those are
+  // terminal failures, no point retrying.
   let intervalSec = codes.interval;
   const deadline = Date.now() + codes.expires_in * 1000;
   let sessionToken: string;
 
-  try {
-    while (true) {
-      if (Date.now() >= deadline) {
-        wait.stop("Timed out waiting for approval.");
-        outro("Code expired. Run `reposmith auth login` again.");
-        process.exit(1);
-      }
+  while (true) {
+    if (Date.now() >= deadline) {
+      wait.stop("Timed out waiting for approval.");
+      outro("Code expired. Run `reposmith auth login` again.");
+      process.exit(1);
+    }
 
-      await sleep(intervalSec * 1000);
+    await sleep(intervalSec * 1000);
 
-      try {
-        const result = await client.pollDeviceToken(codes.device_code, CLI_CLIENT_ID);
-        wait.stop("Approved.");
-        sessionToken = result.access_token;
-        break;
-      } catch (err: unknown) {
-        if (err instanceof DeviceFlowError) {
-          if (err.kind === "pending") {
-            // Standard "still waiting" — keep polling silently.
-            continue;
-          }
-          if (err.kind === "slow_down") {
-            // We're polling too fast. Bump and keep going.
-            intervalSec += 5;
-            continue;
-          }
-          if (err.kind === "denied") {
-            wait.stop("Denied.");
-            outro("Authorization denied in the browser.");
-            process.exit(1);
-          }
-          if (err.kind === "expired") {
-            wait.stop("Expired.");
-            outro("The code expired before approval. Run `reposmith auth login` again.");
-            process.exit(1);
-          }
+    try {
+      const result = await client.pollDeviceToken(codes.device_code, CLI_CLIENT_ID);
+      wait.stop("Approved.");
+      sessionToken = result.access_token;
+      break;
+    } catch (err: unknown) {
+      if (err instanceof DeviceFlowError) {
+        if (err.kind === "pending") {
+          // Standard "still waiting" — keep polling silently.
+          continue;
         }
-        throw err;
+        if (err.kind === "slow_down") {
+          // We're polling too fast. Bump and keep going.
+          intervalSec += 5;
+          continue;
+        }
+        if (err.kind === "denied") {
+          wait.stop("Denied.");
+          outro("Authorization denied in the browser.");
+          process.exit(1);
+        }
+        if (err.kind === "expired") {
+          wait.stop("Expired.");
+          outro("The code expired before approval. Run `reposmith auth login` again.");
+          process.exit(1);
+        }
       }
+      throw err;
     }
-  } catch (err: unknown) {
-    if (isCancel(err)) {
-      // Ctrl-C mid-poll — the device-code row will expire on
-      // its 10-minute TTL.
-      process.exit(0);
-    }
-    throw err;
   }
 
   // ── 4. Exchange the session token for a CLI API key ───────────
@@ -290,7 +282,6 @@ export async function logoutFlow(): Promise<void> {
     // Don't re-throw — we always want to clear the local file,
     // even if the server-side revocation failed.
   }
-  const { clearConfig } = await import("./config.js");
   clearConfig();
   logSuccess("Logged out.");
 }

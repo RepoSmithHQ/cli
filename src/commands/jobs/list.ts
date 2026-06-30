@@ -6,7 +6,9 @@ import {
   runCommand,
 } from "../../lib/command-context.js";
 import { loadConfig } from "../../lib/config.js";
+import { CliError } from "../../lib/errors.js";
 import { printJson, printOutput, printTable } from "../../lib/output.js";
+import { unwrapEnvelope } from "../../lib/types.js";
 import { JOB_STATUSES } from "./_status-filter.js";
 
 export const jobsListCommand = defineCommand({
@@ -51,18 +53,16 @@ export const jobsListCommand = defineCommand({
         cfg ?? {},
       );
       if (!wsId) {
-        process.stderr.write(
-          "No active workspace. Run `reposmith workspace use <id>` first.\n",
+        throw new CliError(
+          "No active workspace. Run `reposmith workspace use <id>` first.",
         );
-        process.exit(1);
       }
 
       const status = (args.status as string | undefined)?.trim();
       if (status && !(JOB_STATUSES as readonly string[]).includes(status)) {
-        process.stderr.write(
-          `Invalid --status "${status}". Allowed: ${JOB_STATUSES.join(", ")}\n`,
+        throw new CliError(
+          `Invalid --status "${status}". Allowed: ${JOB_STATUSES.join(", ")}`,
         );
-        process.exit(1);
       }
 
       const result = await ctx.client.listJobs(wsId, {
@@ -76,12 +76,7 @@ export const jobsListCommand = defineCommand({
         () => printJson(result),
         () => {
           const rows = result.items.map((r) => {
-            const job = r as
-              { job?: Record<string, unknown> } | Record<string, unknown> as Record<
-              string,
-              unknown
-            >;
-            const obj = (job.job ?? job) as Record<string, unknown>;
+            const obj = unwrapEnvelope(r);
             return [
               String(obj.id ?? ""),
               String(obj.status ?? ""),
@@ -105,7 +100,7 @@ export const jobsListCommand = defineCommand({
 function parseLimitOrThrow(raw: string, name: string): number {
   const n = Number(raw);
   if (!Number.isFinite(n) || n < 1 || n > 200 || !Number.isInteger(n)) {
-    throw new Error(`--${name} must be an integer in [1, 200]`);
+    throw new CliError(`--${name} must be an integer in [1, 200]`);
   }
   return n;
 }
@@ -113,7 +108,7 @@ function parseLimitOrThrow(raw: string, name: string): number {
 function parseOffsetOrThrow(raw: string): number {
   const n = Number(raw);
   if (!Number.isFinite(n) || n < 0 || !Number.isInteger(n)) {
-    throw new Error(`--offset must be a non-negative integer`);
+    throw new CliError(`--offset must be a non-negative integer`);
   }
   return n;
 }

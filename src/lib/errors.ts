@@ -1,4 +1,4 @@
-// Errors raised by the API client.
+// Errors raised by the API client and by command bodies.
 //
 // `ApiError` is the typed wrapper for any non-2xx response. We keep
 // the HTTP status code and the parsed body so callers can branch on
@@ -9,6 +9,11 @@
 // distinguish the "you need to run `reposmith auth login` first"
 // case from generic 401s (e.g. a bad route). Commands catch it and
 // print a uniform hint.
+//
+// `CliError` represents client-side failures (bad arguments, missing
+// workspace, etc.) that should print a single clean line on stderr
+// and exit with code 1 — same shape as an `ApiError` from the user's
+// point of view, but produced by the CLI itself rather than the API.
 
 export class ApiError extends Error {
   constructor(
@@ -25,5 +30,12 @@ export class NotLoggedInError extends ApiError {
   constructor(body: unknown) {
     super(401, body, "not logged in");
     this.name = "NotLoggedInError";
+  }
+}
+
+export class CliError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CliError";
   }
 }

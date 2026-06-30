@@ -114,3 +114,24 @@ export interface ArchiveRestorePendingResponse {
 
 export type ArchiveDownloadResponse =
   ArchiveStreamResponse | ArchiveRestorePendingResponse;
+
+/**
+ * Some endpoints return `{ job: {...} }` / `{ repository: {...} }`
+ * envelopes while others return the inner object directly (depending
+ * on whether the row was joined with another table server-side).
+ * `unwrapEnvelope` picks the inner object when an envelope is
+ * present and falls back to the input otherwise — so callers can
+ * treat both shapes uniformly without nested casts.
+ */
+export function unwrapEnvelope<T extends object>(value: T): T;
+export function unwrapEnvelope<T extends object>(value: { job?: T; repository?: T }): T;
+export function unwrapEnvelope<T extends object>(
+  value: T | { job?: T; repository?: T },
+): T {
+  if (value && typeof value === "object") {
+    const v = value as { job?: T; repository?: T };
+    if (v.job) return v.job;
+    if (v.repository) return v.repository;
+  }
+  return value as T;
+}
