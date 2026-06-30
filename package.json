@@ -1,6 +1,6 @@
 {
   "name": "@reposmith/cli",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Repo Smith command-line tool — manage your GitHub backups from the terminal.",
   "type": "module",
   "license": "MIT",
