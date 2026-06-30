@@ -259,3 +259,44 @@ describe("loginFlow — workspace selection", () => {
     expect(cfg?.workspaceId).toBeUndefined();
   });
 });
+
+describe("loginFlow — confirmation code UX", () => {
+  // The whole point of RFC 8628 is that the user sees the same
+  // code on the device (CLI) as in the browser — that's how they
+  // know they're approving the right request. If the CLI prints
+  // the URL but not the code, the user has nothing to compare.
+
+  it("prints the user_code so the user can verify it against the browser", async () => {
+    const ws = makeWorkspace({ id: "ws_solo" });
+    const fetchImpl = queueFetch([
+      { match: (u) => u.includes("/api/auth/device/code"), body: DEVICE_CODE },
+      { match: (u) => u.includes("/api/auth/device/token"), body: DEVICE_TOKEN },
+      {
+        match: (u) => u.includes("/api/cli/v1/auth/device-exchange"),
+        body: LOGIN_RESPONSE,
+      },
+      { match: (u) => u.endsWith("/api/cli/v1/me"), body: makeMe([ws]) },
+    ]);
+
+    // loginFlow writes the prompt block via process.stderr.write —
+    // spy on it (same pattern as progress.test.ts) to capture
+    // everything written during the flow.
+    const writes: string[] = [];
+    const spy = vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
+      writes.push(typeof chunk === "string" ? chunk : String(chunk));
+      return true;
+    });
+    try {
+      await loginFlow({ apiUrl: "https://api.example.com", fetchImpl });
+    } finally {
+      spy.mockRestore();
+    }
+
+    const combined = writes.join("");
+    // The code itself is in the output, on its own labelled line.
+    expect(combined).toMatch(/Confirmation code:\s*\n\s*ABCD-EFGH/);
+    // The complete URL is also printed — the user can copy/paste it
+    // and the code is already in the query string.
+    expect(combined).toContain("https://app.example.com/cli/authorize?code=ABCD-EFGH");
+  });
+});

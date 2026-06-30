@@ -88,6 +88,76 @@ describe("setToken + Authorization header", () => {
   });
 });
 
+describe("User-Agent header", () => {
+  it("sends the default User-Agent on every authenticated request", async () => {
+    const seen: { headers: Headers } = { headers: new Headers() };
+    const fetchImpl: typeof fetch = async (_url, init) => {
+      seen.headers = new Headers((init?.headers ?? {}) as HeadersInit);
+      return jsonResponse({ success: true, user: { id: "u" }, workspaces: [] });
+    };
+    const client = new ApiClient({ baseUrl: "https://x", fetchImpl });
+    await client.me();
+    const ua = seen.headers.get("User-Agent");
+    // Shape only — version is whatever package.json says at runtime,
+    // and `process.versions.node` is bare digits (no `v` prefix).
+    expect(ua).toMatch(/^reposmith-cli\/\S+ \(node\/\d+\.\d+\.\d+\)$/);
+  });
+
+  it("sends User-Agent on unauthenticated requests too (device flow)", async () => {
+    const seen: { headers: Headers } = { headers: new Headers() };
+    const fetchImpl: typeof fetch = async (_url, init) => {
+      seen.headers = new Headers((init?.headers ?? {}) as HeadersInit);
+      return jsonResponse({
+        device_code: "dev",
+        user_code: "USER",
+        verification_uri: "https://example/verify",
+        verification_uri_complete: "https://example/verify?code=USER",
+        expires_in: 600,
+        interval: 5,
+      });
+    };
+    const client = new ApiClient({ baseUrl: "https://x", fetchImpl });
+    await client.requestDeviceCode("reposmith-cli");
+    const ua = seen.headers.get("User-Agent");
+    expect(ua).toMatch(/^reposmith-cli\//);
+  });
+
+  it("honors a custom userAgent override", async () => {
+    const seen: { headers: Headers } = { headers: new Headers() };
+    const fetchImpl: typeof fetch = async (_url, init) => {
+      seen.headers = new Headers((init?.headers ?? {}) as HeadersInit);
+      return jsonResponse({ success: true, user: { id: "u" }, workspaces: [] });
+    };
+    const client = new ApiClient({
+      baseUrl: "https://x",
+      fetchImpl,
+      userAgent: "custom-agent/9.9.9",
+    });
+    await client.me();
+    expect(seen.headers.get("User-Agent")).toBe("custom-agent/9.9.9");
+  });
+
+  it("preserves caller-supplied Authorization on rawRequest", async () => {
+    // rawRequest merges caller headers AFTER the base set, so a
+    // caller-supplied Authorization (used by the device-exchange
+    // path) still wins — same as before adding User-Agent.
+    const seen: { headers: Headers } = { headers: new Headers() };
+    const fetchImpl: typeof fetch = async (_url, init) => {
+      seen.headers = new Headers((init?.headers ?? {}) as HeadersInit);
+      return jsonResponse({
+        success: true,
+        token: "new_key",
+        expiresAt: null,
+        user: { id: "u", email: "e", name: "n" },
+      });
+    };
+    const client = new ApiClient({ baseUrl: "https://x", fetchImpl });
+    await client.exchangeSessionForCliKey("session_tok");
+    expect(seen.headers.get("Authorization")).toBe("Bearer session_tok");
+    expect(seen.headers.get("User-Agent")).toMatch(/^reposmith-cli\//);
+  });
+});
+
 describe("401 → NotLoggedInError", () => {
   it("maps a 401 with a JSON body to NotLoggedInError", async () => {
     const fetchImpl: typeof fetch = async () =>

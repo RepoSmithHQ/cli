@@ -26,11 +26,12 @@ import { reposGetCommand } from "./commands/repos/get.js";
 import { reposListCommand } from "./commands/repos/list.js";
 import { workspaceListCommand } from "./commands/workspace/list.js";
 import { workspaceUseCommand } from "./commands/workspace/use.js";
+import { VERSION } from "./lib/version.js";
 
 export const main = defineCommand({
   meta: {
     name: "reposmith",
-    version: "0.1.0",
+    version: VERSION,
     description: "Repo Smith CLI — manage your GitHub backups from the terminal.",
   },
   args: {

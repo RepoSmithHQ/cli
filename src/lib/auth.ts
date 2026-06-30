@@ -123,15 +123,18 @@ export async function loginFlow(opts: LoginOptions = {}): Promise<LoginResult> {
     [
       "",
       "  Open this URL in your browser:",
-      `    ${codes.verification_uri}`,
+      `    ${codes.verification_uri_complete}`,
+      "",
+      "  Confirmation code:",
+      `    ${codes.user_code}`,
       "",
       browserOpened
         ? "  (Your browser should have opened automatically. If not,"
         : "  (We could not open your browser automatically; copy the URL above",
       "   paste it into any browser on this or another machine.)",
       "",
-      "  Confirm that the confirmation code printed in the browser",
-      "  matches this one. If they don't match, deny the request.",
+      "  Confirm that the code above matches the one shown in the browser.",
+      "  If they don't match, deny the request.",
       "",
     ].join("\n"),
   );
