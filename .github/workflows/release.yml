@@ -1,0 +1,73 @@
+name: Release
+
+# Triggered on every push to the default branch. semantic-release inspects
+# the commits since the last tag and decides whether a new version is
+# warranted — if not, it exits 0 and no release is published.
+on:
+  push:
+    branches:
+      - main
+
+# Top-level permissions are intentionally read-only; each job widens
+# its own. `contents: read` is needed for `actions/checkout`.
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history is required so semantic-release can read commit
+          # messages and walk tags when it runs in the release job below.
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Install dependencies
+        run: npm clean-install
+
+      # Verifies provenance attestations and registry signatures for
+      # installed dependencies — catches supply-chain tampering before
+      # we ship a release built on top of them.
+      - name: Verify dependency signatures
+        run: npm audit signatures
+
+      - name: Run tests
+        run: npm test
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: verify
+    permissions:
+      contents: write # to publish a GitHub release and push the version bump
+      issues: write # to comment on released issues
+      pull-requests: write # to comment on released pull requests
+      id-token: write # OIDC for npm trusted publishing + npm provenance
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          # NOTE: do not set `registry-url` here — it conflicts with the
+          # OIDC token exchange semantic-release performs for npm auth.
+
+      - name: Install dependencies
+        run: npm clean-install
+
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
