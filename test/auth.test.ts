@@ -18,10 +18,7 @@
 // stubbed via `fetchImpl` injection, same pattern as
 // `client.test.ts`.
 
-import {
-  mkdtempSync,
-  rmSync,
-} from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -34,11 +31,7 @@ vi.mock("open", () => ({
 }));
 
 import { loginFlow } from "../src/lib/auth.js";
-import {
-  clearConfig,
-  loadConfig,
-  saveConfig,
-} from "../src/lib/config.js";
+import { clearConfig, loadConfig, saveConfig } from "../src/lib/config.js";
 import type {
   DeviceCodeResponse,
   DeviceTokenSuccess,
@@ -103,7 +96,11 @@ function makeMe(workspaces: WorkspaceSummary[]): MeResponse {
  * silently-wrong result.
  */
 function queueFetch(
-  responses: Array<{ match: (url: string, init?: RequestInit) => boolean; body: unknown; status?: number }>,
+  responses: Array<{
+    match: (url: string, init?: RequestInit) => boolean;
+    body: unknown;
+    status?: number;
+  }>,
 ): typeof fetch {
   const calls: Array<{ url: string; method: string }> = [];
   let i = 0;
@@ -114,9 +111,7 @@ function queueFetch(
     const step = responses[i] ?? responses[responses.length - 1];
     i += 1;
     if (!step || !step.match(url, init)) {
-      throw new Error(
-        `Unexpected fetch call #${i}: ${method} ${url} (queue exhausted)`,
-      );
+      throw new Error(`Unexpected fetch call #${i}: ${method} ${url} (queue exhausted)`);
     }
     return new Response(JSON.stringify(step.body), {
       status: step.status ?? 200,
@@ -129,8 +124,7 @@ const DEVICE_CODE: DeviceCodeResponse = {
   device_code: "dev_123",
   user_code: "ABCD-EFGH",
   verification_uri: "https://app.example.com/cli/authorize",
-  verification_uri_complete:
-    "https://app.example.com/cli/authorize?code=ABCD-EFGH",
+  verification_uri_complete: "https://app.example.com/cli/authorize?code=ABCD-EFGH",
   expires_in: 600,
   interval: 1,
 };

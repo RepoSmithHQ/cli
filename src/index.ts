@@ -1,25 +1,23 @@
 #!/usr/bin/env node
 // Entry point.
 //
-// citty's `runMain` swallows errors internally (prints them via
-// consola but doesn't reject). To get our clean `error: …`
-// behavior we dispatch manually: parse args, walk the subcommand
-// tree, invoke the matching command's `run()` ourselves.
+// citty's `runMain` handles argv parsing + subcommand dispatch
+// and prints errors via consola on the failure paths it owns. We
+// don't intercept parsing — we let citty do its thing and add an
+// `uncaughtException` listener so the rare escape (an async path
+// that wasn't awaited inside the command body) still produces a
+// clean line on stderr instead of a raw stack trace.
 
 import { runMain } from "citty";
 
 import { ApiError } from "./lib/errors.js";
 import { main } from "./main.js";
 
-async function dispatch(): Promise<void> {
-  // `runMain` returns a Promise that resolves after the command
-  // finishes. citty internally handles errors by printing them
-  // with consola — but it does NOT reject on user-facing errors
-  // like 404s, so the cleanest path is to let citty drive parsing
-  // + dispatch, and provide our own console interception at the
-  // uncaughtException level for the rare cases errors escape.
-  await runMain(main);
-}
+runMain(main).catch((err: unknown) => {
+  const e = err as Error | undefined;
+  process.stderr.write(`unexpected error: ${e?.message ?? String(err)}\n`);
+  process.exit(2);
+});
 
 process.on("uncaughtException", (err: unknown) => {
   if (err instanceof ApiError) {
@@ -34,15 +32,8 @@ process.on("uncaughtException", (err: unknown) => {
     process.exit(1);
   }
   const e = err as Error | undefined;
-  // Silence the noisy default `error.stack` for ApiError-likes
-  // the catch handlers let through — they have a stack but no
-  // value to the user.
-  process.stderr.write(`unexpected error: ${e?.message ?? String(err)}\n`);
-  process.exit(2);
-});
-
-dispatch().catch((err: unknown) => {
-  const e = err as Error | undefined;
+  // ApiError-likes the catch handlers let through carry a stack
+  // but no value to the user — silence it.
   process.stderr.write(`unexpected error: ${e?.message ?? String(err)}\n`);
   process.exit(2);
 });

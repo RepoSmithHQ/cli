@@ -2,6 +2,7 @@ import { defineCommand } from "citty";
 
 import { resolveContext, runCommand } from "../../lib/command-context.js";
 import { printJson } from "../../lib/output.js";
+import { unwrapEnvelope } from "../../lib/types.js";
 
 export const jobsGetCommand = defineCommand({
   meta: {
@@ -31,7 +32,7 @@ export const jobsGetCommand = defineCommand({
         return;
       }
 
-      const job = (result.job ?? result) as Record<string, unknown>;
+      const job = unwrapEnvelope(result);
       const lines = [
         `ID:           ${job.id}`,
         `Status:       ${job.status}`,

@@ -11,9 +11,10 @@
 // default if `--workspace` isn't passed.
 
 import { ApiClient } from "./client.js";
+import type { Config } from "./config.js";
 import { loadConfig, requireConfig } from "./config.js";
 import { DEFAULT_API_URL } from "./consts.js";
-import { ApiError, NotLoggedInError } from "./errors.js";
+import { ApiError, CliError, NotLoggedInError } from "./errors.js";
 import { type OutputMode, resolveOutputMode } from "./output-mode.js";
 
 export interface CommandContext {
@@ -37,38 +38,38 @@ export interface ResolveContextOptions {
   requireLogin?: boolean;
 }
 
+/**
+ * Resolve the API base URL with the standard priority:
+ *   1. `REPOSMITH_API` env var (one-off override, e.g. local dev)
+ *   2. `Config.apiUrl` (set by an earlier `reposmith auth login`
+ *      against a custom host — the user has told us about it)
+ *   3. `DEFAULT_API_URL` from `./consts.ts`
+ */
+function resolveApiUrl(cfg: Config | null): string {
+  const fromEnv = process.env.REPOSMITH_API;
+  if (fromEnv && fromEnv.length > 0) return fromEnv.replace(/\/+$/, "");
+  if (cfg?.apiUrl) return cfg.apiUrl.replace(/\/+$/, "");
+  return DEFAULT_API_URL;
+}
+
 export function resolveContext(opts: ResolveContextOptions = {}): CommandContext {
-  // Two-branch load: `requireLogin !== false` (default true) calls
-  // `requireConfig()` which throws on missing config; otherwise we
-  // tolerate absence (used by `auth login` / `auth logout`).
   const requireLogin = opts.requireLogin !== false;
 
-  // Priority for apiUrl:
-  //   1. `REPOSMITH_API` env var (one-off override, e.g. local dev)
-  //   2. `Config.apiUrl` (set by an earlier `reposmith auth login`
-  //      against a custom host — the user has told us about it)
-  //   3. `DEFAULT_API_URL` from `./consts.ts`
-  const fromEnv = process.env.REPOSMITH_API;
-  const cfg = requireLogin ? requireConfig() : loadConfig();
-  const apiUrl =
-    (fromEnv && fromEnv.length > 0 ? fromEnv : undefined) ??
-    cfg?.apiUrl ??
-    DEFAULT_API_URL;
-
   if (requireLogin) {
-    // `cfg` is `Config` (non-null) here — `requireConfig()` typed
-    // as `Config`. Cast so the rest of the function can use a
-    // single union type.
-    const required = cfg as NonNullable<typeof cfg>;
+    const cfg = requireConfig();
+    const apiUrl = resolveApiUrl(cfg);
     return {
-      client: new ApiClient({ baseUrl: apiUrl, token: required.token }),
+      client: new ApiClient({ baseUrl: apiUrl, token: cfg.token }),
       apiUrl,
-      workspaceId: required.workspaceId,
+      workspaceId: cfg.workspaceId,
       json: resolveOutputMode(opts.json),
     };
   }
 
-  // Login-required: false. Tolerate config absence.
+  // Login-not-required: tolerate config absence (used by
+  // `auth login` / `auth logout` / `workspace use`).
+  const cfg = loadConfig();
+  const apiUrl = resolveApiUrl(cfg);
   const token = cfg?.token;
   return {
     client: new ApiClient({
@@ -95,10 +96,16 @@ export function resolveActiveWorkspaceId(
 }
 
 /**
- * Wrap a command's body so that `ApiError`s (including
- * `NotLoggedInError`) print a clean message + non-zero exit
- * WITHOUT a stack trace, and unexpected errors still bubble with
- * a stack.
+ * Wrap a command's body so typed errors (`NotLoggedInError`,
+ * `ApiError`, `CliError`) print a clean message + non-zero exit
+ * WITHOUT a stack trace, and unexpected errors rethrow so the
+ * top-level `uncaughtException` handler can deal with them.
+ *
+ * CONTRACT: This function does not return on handled errors — it
+ * calls `process.exit(1)` directly. The `Promise<void>` resolves
+ * only on the success path. Callers should NOT put cleanup in a
+ * `finally` that needs to run on the error path (the process is
+ * about to exit anyway).
  *
  * Use inside `run({ args, cmd })`:
  *
@@ -114,6 +121,10 @@ export async function runCommand(body: () => Promise<void>): Promise<void> {
   } catch (err: unknown) {
     if (err instanceof NotLoggedInError) {
       process.stderr.write(`error: not logged in — run \`reposmith auth login\` first\n`);
+      process.exit(1);
+    }
+    if (err instanceof CliError) {
+      process.stderr.write(`error: ${err.message}\n`);
       process.exit(1);
     }
     if (err instanceof ApiError) {

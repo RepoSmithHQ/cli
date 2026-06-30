@@ -12,10 +12,19 @@ const BOLD = "\x1b[1m";
 const DIM = "\x1b[2m";
 const CYAN = "\x1b[36m";
 
+/**
+ * Per https://no-color.org/: any non-empty value in `NO_COLOR`
+ * disables ANSI escapes. Honored in addition to the stdout-TTY
+ * check so users with `NO_COLOR=1` in their shell rc can pipe
+ * `repos …` to a file without escape codes leaking in.
+ */
+function shouldColor(): boolean {
+  if (process.env.NO_COLOR && process.env.NO_COLOR.length > 0) return false;
+  return process.stdout.isTTY === true;
+}
+
 function color(s: string, code: string): string {
-  // Only emit ANSI escapes when stdout is a TTY AND the user hasn't
-  // piped the output (we check the mode to honor `--no-color`).
-  if (!process.stdout.isTTY) return s;
+  if (!shouldColor()) return s;
   return `${code}${s}${RESET}`;
 }
 
@@ -88,5 +97,3 @@ export function printOutput(mode: OutputMode, json: () => void, table: () => voi
   if (mode === "json") json();
   else table();
 }
-
-export { color };

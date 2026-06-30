@@ -2,6 +2,7 @@ import { defineCommand } from "citty";
 
 import { resolveContext, runCommand } from "../../lib/command-context.js";
 import { loadConfig, saveConfig } from "../../lib/config.js";
+import { CliError } from "../../lib/errors.js";
 import { logSuccess } from "../../lib/output.js";
 import type { WorkspaceSummary } from "../../lib/types.js";
 
@@ -52,23 +53,19 @@ export const workspaceUseCommand = defineCommand({
       }
 
       if (byName.length > 1) {
-        process.stderr.write(
-          `Multiple workspaces match "${needle}" by name. Pick an id:\n`,
+        const candidates = byName.map((w) => `  • ${w.id}  ${w.name}`).join("\n");
+        throw new CliError(
+          `Multiple workspaces match "${needle}" by name. Pick an id:\n${candidates}`,
         );
-        for (const w of byName) {
-          process.stderr.write(`  • ${w.id}  ${w.name}\n`);
-        }
-        process.exit(1);
       }
 
       // No exact id match, no unique name match → ambiguous or
       // unknown. Print the available workspaces to help the user
       // spot the typo.
-      process.stderr.write(`No workspace found matching "${needle}". Available:\n`);
-      for (const w of me.workspaces) {
-        process.stderr.write(`  • ${w.id}  ${w.name}\n`);
-      }
-      process.exit(1);
+      const available = me.workspaces.map((w) => `  • ${w.id}  ${w.name}`).join("\n");
+      throw new CliError(
+        `No workspace found matching "${needle}". Available:\n${available}`,
+      );
     });
   },
 });

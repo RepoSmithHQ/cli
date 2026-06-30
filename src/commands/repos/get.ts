@@ -2,6 +2,7 @@ import { defineCommand } from "citty";
 
 import { resolveContext, runCommand } from "../../lib/command-context.js";
 import { printJson } from "../../lib/output.js";
+import { unwrapEnvelope } from "../../lib/types.js";
 
 export const reposGetCommand = defineCommand({
   meta: {
@@ -31,7 +32,7 @@ export const reposGetCommand = defineCommand({
         return;
       }
 
-      const repo = (result.repository ?? result) as Record<string, unknown>;
+      const repo = unwrapEnvelope(result);
       const lines = [
         `ID:           ${repo.id}`,
         `Name:         ${repo.name}`,

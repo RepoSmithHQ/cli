@@ -85,9 +85,3 @@ export const main = defineCommand({
     }),
   },
 });
-
-// Re-export the helpers that the subcommands need so they can
-// `import { resolveContext } from "../main"`.
-export type RootArgs = {
-  json: boolean;
-};

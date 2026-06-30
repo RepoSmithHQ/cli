@@ -6,7 +6,9 @@ import {
   runCommand,
 } from "../../lib/command-context.js";
 import { loadConfig } from "../../lib/config.js";
+import { CliError } from "../../lib/errors.js";
 import { printJson, printOutput, printTable } from "../../lib/output.js";
+import { unwrapEnvelope } from "../../lib/types.js";
 
 export const reposListCommand = defineCommand({
   meta: {
@@ -50,10 +52,9 @@ export const reposListCommand = defineCommand({
         cfg ?? {},
       );
       if (!wsId) {
-        process.stderr.write(
-          "No active workspace. Run `reposmith workspace use <id>` first.\n",
+        throw new CliError(
+          "No active workspace. Run `reposmith workspace use <id>` first.",
         );
-        process.exit(1);
       }
 
       const result = await ctx.client.listRepositories(wsId, {
@@ -67,7 +68,7 @@ export const reposListCommand = defineCommand({
         () => printJson(result),
         () => {
           const rows = result.items.map((r) => {
-            const repo = (r.repository ?? r) as Record<string, unknown>;
+            const repo = unwrapEnvelope(r);
             const latest = r.latestJob as Record<string, unknown> | null | undefined;
             const status = latest?.status ?? "—";
             const lastBackup = latest?.createdAt ?? "—";
@@ -94,7 +95,7 @@ export const reposListCommand = defineCommand({
 function parseLimitOrThrow(raw: string, name: string): number {
   const n = Number(raw);
   if (!Number.isFinite(n) || n < 1 || n > 200 || !Number.isInteger(n)) {
-    throw new Error(`--${name} must be an integer in [1, 200]`);
+    throw new CliError(`--${name} must be an integer in [1, 200]`);
   }
   return n;
 }
@@ -102,7 +103,7 @@ function parseLimitOrThrow(raw: string, name: string): number {
 function parseOffsetOrThrow(raw: string): number {
   const n = Number(raw);
   if (!Number.isFinite(n) || n < 0 || !Number.isInteger(n)) {
-    throw new Error(`--offset must be a non-negative integer`);
+    throw new CliError(`--offset must be a non-negative integer`);
   }
   return n;
 }
