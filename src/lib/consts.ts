@@ -6,4 +6,4 @@
 // in `env.ts`; the values below are static.
 
 /** Production API base URL. Override at runtime via `REPOSMITH_API`. */
-export const DEFAULT_API_URL = "https://reposmith.com/api";
+export const DEFAULT_API_URL = "https://reposmith.com";
