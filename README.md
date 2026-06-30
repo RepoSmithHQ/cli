@@ -1,7 +1,7 @@
 # Repo Smith CLI
 
 [![npm version](https://img.shields.io/npm/v/@reposmith/cli)](https://www.npmjs.com/package/@reposmith/cli)
-[![CI](https://img.shields.io/github/actions/workflow/status/RepoSmithHQ/cli/ci.yml?branch=main)](https://github.com/RepoSmithHQ/cli/actions)
+[![CI](https://github.com/RepoSmithHQ/cli/actions/workflows/ci.yml/badge.svg)](https://github.com/RepoSmithHQ/cli/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 The `reposmith` command-line tool — manage your GitHub backups from the terminal. Browse backups, list jobs, and download archive tarballs for any repository you've connected to [Repo Smith](https://reposmith.com). Every command also speaks JSON for piping into `jq`, `fzf`, or your shell pipeline.
@@ -11,14 +11,10 @@ This package is **independent of the Repo Smith web app** — it talks to a publ
 ## Install
 
 ```bash
-# from the repo (for development)
-cd cli && npm install && npm run build && npm link
-
-# from npm (once published)
 npm install -g @reposmith/cli
 ```
 
-Node 20+ is required (uses the built-in `fetch` and `Response.body.getReader()`).
+Node 20+ is required.
 
 ## Quick start
 
@@ -80,7 +76,7 @@ reposmith repos list --json | jq '.[0].id'
 
 The CLI stores its config in:
 
-- `${XDG_CONFIG_HOME:-~/.config}/reposmith/config.json` (mode 0600)
+- `${~/.config}/reposmith/config.json` (mode 0600)
 
 The file holds the API base URL, your CLI bearer token, and the active workspace id. To wipe local state:
 
