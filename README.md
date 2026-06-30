@@ -1,122 +1,221 @@
-# Repo Smith CLI
+# @reposmith/cli
 
-[![npm version](https://img.shields.io/npm/v/@reposmith/cli)](https://www.npmjs.com/package/@reposmith/cli)
-[![CI](https://github.com/RepoSmithHQ/cli/actions/workflows/ci.yml/badge.svg)](https://github.com/RepoSmithHQ/cli/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+Command line interface for [Repo Smith](https://reposmith.com) — manage your GitHub backups from the terminal.
 
-The `reposmith` command-line tool — manage your GitHub backups from the terminal. Browse backups, list jobs, and download archive tarballs for any repository you've connected to [Repo Smith](https://reposmith.com). Every command also speaks JSON for piping into `jq`, `fzf`, or your shell pipeline.
-
-This package is **independent of the Repo Smith web app** — it talks to a public HTTP API (`/api/cli/v1/*`) and stores its config locally. It does not import or depend on anything in `../web/` at runtime.
-
-## Install
+## Installation
 
 ```bash
 npm install -g @reposmith/cli
 ```
 
-Node 20+ is required.
+Requires Node.js 20+.
 
-## Quick start
+## Usage
+
+```
+reposmith <command> [flags]
+```
+
+Run `reposmith help` to see all available commands, or `reposmith <command> help` for details on a specific command.
+
+Pass `--json` (or `-j`) to any list or get command to emit machine-readable output. The flag is also implied when stdout is piped.
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `reposmith auth login` | Authenticate via browser — opens the Repo Smith web app for approval via the device flow |
+| `reposmith auth logout` | Revoke the CLI token and clear the local config. Idempotent |
+| `reposmith workspace list` | List the workspaces the current user is a member of |
+| `reposmith workspace use <id\|name>` | Set the active workspace by id or unique name. Stored locally |
+| `reposmith repos list` | List repositories in the active workspace. Supports substring filtering |
+| `reposmith repos get <id>` | Show one repository by id |
+| `reposmith jobs list` | List recent backup jobs in the active workspace |
+| `reposmith jobs get <id>` | Show one backup job by id, including archive availability |
+| `reposmith archives download <job-id>` | Download a backup archive for a completed job. Streams directly from object storage |
+
+---
+
+### `reposmith auth login`
+
+Authenticate via browser — opens the Repo Smith web app for approval via the RFC 8628 device flow. After you click Approve, the CLI receives a scoped API key. Your password never reaches the CLI; 2FA is enforced by the web app before approval.
+
+```
+reposmith auth login
+```
+
+**Examples:**
 
 ```bash
-reposmith auth login              # opens your browser, you approve, done
-reposmith workspace list          # shows workspaces you belong to
-reposmith workspace use ws_abc123  # sets the active workspace
-reposmith repos list              # lists repositories in the active workspace
+reposmith auth login
+```
+
+### `reposmith auth logout`
+
+Revoke the CLI token and clear the local config. Idempotent — safe to run if you're not logged in.
+
+```
+reposmith auth logout
+```
+
+**Examples:**
+
+```bash
+reposmith auth logout
+```
+
+### `reposmith workspace list`
+
+List the workspaces the current user is a member of.
+
+```
+reposmith workspace list [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-j, --json` | Output JSON instead of a table |
+
+**Examples:**
+
+```bash
+reposmith workspace list
+reposmith workspace list --json | jq '.[0].id'
+```
+
+### `reposmith workspace use`
+
+Set the active workspace by id or unique name. Stored locally, defaults every subsequent `repos` and `jobs` command.
+
+```
+reposmith workspace use <id|name>
+```
+
+**Examples:**
+
+```bash
+reposmith workspace use ws_abc123
+reposmith workspace use "Acme Engineering"
+```
+
+### `reposmith repos list`
+
+List repositories in the active workspace.
+
+```
+reposmith repos list [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-w, --workspace` | Workspace id (defaults to the one set by `reposmith workspace use`) |
+| `-q, --search` | Substring filter against repository name or external id |
+| `--limit` | Maximum rows to return, 1-200 (default: `50`) |
+| `--offset` | Skip this many rows before returning (default: `0`) |
+| `-j, --json` | Output JSON instead of a table |
+
+**Examples:**
+
+```bash
+reposmith repos list
 reposmith repos list --search my-cool-repo
-reposmith jobs list --status succeeded --limit 5
-reposmith jobs get <job-id>
-reposmith archives download <job-id>
-reposmith archives download <job-id> --out /tmp/repo.tar.gz
+reposmith repos list --json | jq '.[].name'
 ```
 
-All list commands default to a human-readable table when stdout is a TTY. Pass `--json` to get machine-readable output:
+### `reposmith repos get`
+
+Show one repository by id.
+
+```
+reposmith repos get <id> [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-j, --json` | Output JSON instead of a key/value block |
+
+**Examples:**
 
 ```bash
-reposmith repos list --json | jq '.[0].id'
+reposmith repos get repo_abc123
 ```
 
-## Commands
+### `reposmith jobs list`
 
-### `auth`
+List recent backup jobs in the active workspace.
 
-| Command | Description |
-|---|---|
-| `reposmith auth login` | Opens the browser to `/app/cli/authorize`. Approve in the browser; the CLI receives a scoped API key. |
-| `reposmith auth logout` | Revoke the CLI key server-side and remove the local token. Idempotent. |
+```
+reposmith jobs list [flags]
+```
 
-### `workspace`
+| Flag | Description |
+|------|-------------|
+| `-w, --workspace` | Workspace id (defaults to the one set by `reposmith workspace use`) |
+| `--status` | Filter by job status (`pending`, `cloning`, `uploading`, `succeeded`, `failed`) |
+| `--limit` | Maximum rows to return, 1-200 (default: `50`) |
+| `--offset` | Skip this many rows before returning (default: `0`) |
+| `-j, --json` | Output JSON instead of a table |
 
-| Command | Description |
-|---|---|
-| `reposmith workspace list` | List the workspaces you're a member of. |
-| `reposmith workspace use <id\|name>` | Set the active workspace (stored locally). |
+**Examples:**
 
-### `repos`
+```bash
+reposmith jobs list --status succeeded --limit 5
+reposmith jobs list --json | jq '.items[].id'
+```
 
-| Command | Description |
-|---|---|
-| `reposmith repos list` | List repos in a workspace. `--limit N`, `--offset M`, `--search <q>`, `--workspace <id>`, `--json`. |
-| `reposmith repos get <id>` | Show one repo by id. |
+### `reposmith jobs get`
 
-### `jobs`
+Show one backup job by id, including archive availability and encryption mode.
 
-| Command | Description |
-|---|---|
-| `reposmith jobs list` | List backup jobs. `--limit N`, `--offset M`, `--status <s>`, `--workspace <id>`, `--json`. |
-| `reposmith jobs get <id>` | Show one job by id. |
+```
+reposmith jobs get <id> [flags]
+```
 
-### `archives`
+| Flag | Description |
+|------|-------------|
+| `-j, --json` | Output JSON instead of a key/value block |
 
-| Command | Description |
-|---|---|
-| `reposmith archives download <job-id>` | Download a backup archive. Streams directly from object storage — Nitro is never on the bandwidth path. `--out <path>` to override the destination. |
+**Examples:**
+
+```bash
+reposmith jobs get job_abc123
+```
+
+### `reposmith archives download`
+
+Download a backup archive for a completed job. Streams directly from object storage via a short-lived presigned URL — no proxy through the API.
+
+```
+reposmith archives download <job-id> [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-o, --out` | Destination path. Defaults to `./<repoSlug>-<jobPrefix>.<ext>` in the current directory |
+
+If the archive lives in cold storage, the server queues a restore and emails you the download link (and the per-backup password, if applicable) when it's ready.
+
+**Examples:**
+
+```bash
+reposmith archives download job_abc123
+reposmith archives download job_abc123 --out /tmp/repo.tar.gz
+```
 
 ## Configuration
 
-The CLI stores its config in:
+The CLI stores its config at `~/.config/reposmith/config.json` (mode `0600`). The file holds the API base URL, your CLI bearer token, and the active workspace id.
 
-- `${~/.config}/reposmith/config.json` (mode 0600)
-
-The file holds the API base URL, your CLI bearer token, and the active workspace id. To wipe local state:
+To wipe local state:
 
 ```bash
 rm -rf ~/.config/reposmith
 ```
 
-To target a local dev server instead of production:
+To target a local dev server instead of production, set `REPOSMITH_API` for a single invocation:
 
 ```bash
 REPOSMITH_API=http://localhost:3000 reposmith auth login
-```
-
-…or pass `--api http://localhost:3000` to any command.
-
-## Auth model
-
-The CLI uses a dedicated API key issued by the Repo Smith server. Keys are 90 days by default and minted via the **device-flow login**: the CLI opens the web app, the user approves, and the CLI receives a scoped API key in the background.
-
-**Keys are scoped to the CLI only.** A CLI key is rejected by every `/api/*` route (the session middleware doesn't accept `Authorization: Bearer` for non-CLI routes). A regular session cookie is rejected by every `/api/cli/*` route (the CLI middleware doesn't accept session cookies). The two namespaces are isolated by design.
-
-The CLI never sees your password. 2FA works for free: the web app enforces TOTP before the user can click Approve, so the CLI doesn't have to.
-
-## Releasing
-
-Publishing is manual for v0.1.0 — every PR runs the CI workflow (`.github/workflows/ci.yml`) as a required check, so by the time you tag, you know the build is green.
-
-```bash
-# 1. Bump version (creates a commit + tag)
-npm version patch    # 0.1.0 → 0.1.1
-# or `npm version minor` / `npm version major`
-
-# 2. Build + verify (prepublishOnly does this automatically)
-npm run build && npm run publint
-
-# 3. Publish to npm
-npm publish --access public
-
-# 4. Push the tag
-git push --follow-tags
 ```
 
 ## License
