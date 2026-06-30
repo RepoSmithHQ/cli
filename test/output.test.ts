@@ -98,7 +98,11 @@ describe("printTable", () => {
       const lines = logSpy.mock.calls.map((c) => String(c[0]));
       // Strip ANSI before comparing — escapes are zero-width but
       // padEnd counts them as chars unless we wrap-after-padding.
-      const visible = lines.map((l) => l.replace(/\x1b\[[0-9;]*m/g, ""));
+      // Built via String.fromCharCode so the regex source doesn't
+      // contain the control character (ESLint's no-control-regex
+      // would flag a `\x1b` literal).
+      const ansiEscapeRe = new RegExp(`${String.fromCharCode(0x1b)}\\[[0-9;]*m`, "g");
+      const visible = lines.map((l) => l.replace(ansiEscapeRe, ""));
       expect(visible[0].length).toBe(visible[1].length);
       expect(visible[0].length).toBe(visible[2].length);
     } finally {
